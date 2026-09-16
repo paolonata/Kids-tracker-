@@ -1,0 +1,338 @@
+package com.kidstracker.ui.schermate
+
+import android.content.Context
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import com.kidstracker.data.Backup
+import com.kidstracker.domain.Bambino
+import com.kidstracker.domain.Giornata
+import com.kidstracker.domain.Voto
+import com.kidstracker.ui.componenti.BottoneContornato
+import com.kidstracker.ui.componenti.BottoneSticker
+import com.kidstracker.ui.componenti.Faccina
+import com.kidstracker.ui.componenti.IconaFreccia
+import com.kidstracker.ui.componenti.IconaOrologio
+import com.kidstracker.ui.componenti.IntestazionePrugna
+import com.kidstracker.ui.componenti.PillolaScelta
+import com.kidstracker.ui.componenti.SchedaSticker
+import com.kidstracker.ui.componenti.sticker
+import com.kidstracker.ui.tema.Crema
+import com.kidstracker.ui.tema.Inchiostro
+import com.kidstracker.ui.tema.InkTenue
+import com.kidstracker.ui.tema.InkTerziario
+import com.kidstracker.ui.tema.Rosso
+import com.kidstracker.ui.tema.Sabbia
+import com.kidstracker.ui.tema.coloreBambino
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.time.LocalDate
+
+@Composable
+fun SchermataImpostazioni(
+    bambini: List<Bambino>,
+    promemoriaAttivo: Boolean,
+    oraPromemoria: Int,
+    onRinomina: (Bambino, String) -> Unit,
+    onPromemoria: (Boolean) -> Unit,
+    onOra: (Int) -> Unit,
+    onEsporta: suspend () -> Pair<List<Bambino>, List<Giornata>>,
+    onImporta: suspend (Backup.Importazione, Boolean) -> Int,
+    onCancellaTutto: () -> Unit,
+    onIndietro: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val contesto = LocalContext.current
+    val ambito = rememberCoroutineScope()
+    var messaggio by remember { mutableStateOf<String?>(null) }
+    var chiedeConferma by remember { mutableStateOf(false) }
+
+    val salvaJson = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri: Uri? ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        ambito.launch {
+            val (elenco, giornate) = onEsporta()
+            val testo = Backup.esportaJson(elenco, giornate)
+            messaggio = scrivi(contesto, uri, testo, "${giornate.size} giornate esportate")
+        }
+    }
+
+    val salvaCsv = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/csv")
+    ) { uri: Uri? ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        ambito.launch {
+            val (elenco, giornate) = onEsporta()
+            val testo = Backup.esportaCsv(elenco, giornate)
+            messaggio = scrivi(contesto, uri, testo, "${giornate.size} righe nel CSV")
+        }
+    }
+
+    val apriJson = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        ambito.launch {
+            messaggio = try {
+                val testo = withContext(Dispatchers.IO) {
+                    contesto.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
+                } ?: error("file vuoto")
+                val importazione = Backup.importaJson(testo)
+                val quante = onImporta(importazione, false)
+                "$quante giornate importate"
+            } catch (errore: Exception) {
+                "Non sono riuscito a leggere il file: ${errore.message ?: "formato non riconosciuto"}"
+            }
+        }
+    }
+
+    Column(modifier = modifier) {
+        IntestazionePrugna(
+            titolo = "Impostazioni",
+            sottotitolo = "nomi, promemoria e backup",
+            azione = {
+                BottoneContornato(onIndietro, "Torna indietro") { tinta -> IconaFreccia(tinta) }
+            }
+        )
+
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            SchedaSticker(modifier = Modifier.offset(y = (-20).dp)) {
+                Text("I bambini", style = MaterialTheme.typography.headlineSmall)
+                bambini.forEach { bambino ->
+                    Spacer(Modifier.height(12.dp))
+                    var nome by remember(bambino.id) { mutableStateOf(bambino.nome) }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Faccina(
+                            voto = Voto.SI,
+                            dimensione = 34.dp,
+                            riempimento = coloreBambino(bambino.coloreIndex),
+                            tratto = Inchiostro
+                        )
+                        CampoNome(
+                            valore = nome,
+                            posizione = bambino.coloreIndex + 1,
+                            onCambia = {
+                                nome = it
+                                onRinomina(bambino, it)
+                            },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+            }
+
+            SchedaSticker(sfondo = Sabbia) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(9.dp)
+                ) {
+                    IconaOrologio(Inchiostro, dimensione = 20.dp)
+                    Text("Promemoria", style = MaterialTheme.typography.headlineSmall)
+                }
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    "Una notifica al giorno per ricordarti di segnare le faccine.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = InkTerziario
+                )
+                Spacer(Modifier.height(12.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                    PillolaScelta(
+                        testo = "Attivo",
+                        selezionata = promemoriaAttivo,
+                        onClick = { onPromemoria(true) },
+                        modifier = Modifier.weight(1f)
+                    )
+                    PillolaScelta(
+                        testo = "Spento",
+                        selezionata = !promemoriaAttivo,
+                        onClick = { onPromemoria(false) },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                if (promemoriaAttivo) {
+                    Spacer(Modifier.height(12.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        PassoOra("−15 min", "Anticipa di un quarto d'ora") {
+                            onOra(oraPromemoria - 15)
+                        }
+                        Text(
+                            orario(oraPromemoria),
+                            style = MaterialTheme.typography.displaySmall,
+                            modifier = Modifier.weight(1f),
+                            textAlign = TextAlign.Center
+                        )
+                        PassoOra("+15 min", "Posticipa di un quarto d'ora") {
+                            onOra(oraPromemoria + 15)
+                        }
+                    }
+                }
+            }
+
+            SchedaSticker {
+                Text("Backup", style = MaterialTheme.typography.headlineSmall)
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    "Il JSON si può reimportare senza perdere nulla. Il CSV serve per " +
+                        "aprire i dati in un foglio di calcolo.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = InkTerziario
+                )
+                Spacer(Modifier.height(13.dp))
+                Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                    BottoneSticker(
+                        testo = "Esporta JSON",
+                        onClick = { salvaJson.launch(nomeFile("json")) },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    BottoneSticker(
+                        testo = "Esporta CSV",
+                        onClick = { salvaCsv.launch(nomeFile("csv")) },
+                        sfondo = Crema,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    BottoneSticker(
+                        testo = "Importa da JSON",
+                        onClick = { apriJson.launch(arrayOf("application/json", "text/plain", "*/*")) },
+                        sfondo = Crema,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                messaggio?.let {
+                    Spacer(Modifier.height(12.dp))
+                    Text(it, style = MaterialTheme.typography.bodyMedium, color = InkTerziario)
+                }
+            }
+
+            SchedaSticker(sfondo = Crema) {
+                Text("Ricominciare da capo", style = MaterialTheme.typography.headlineSmall)
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    "Cancella tutte le giornate segnate. I nomi restano. " +
+                        "Non si torna indietro: prima esporta.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = InkTerziario
+                )
+                Spacer(Modifier.height(13.dp))
+                if (chiedeConferma) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                        BottoneSticker(
+                            testo = "Sì, cancella",
+                            onClick = {
+                                onCancellaTutto()
+                                chiedeConferma = false
+                                messaggio = "Giornate cancellate"
+                            },
+                            sfondo = Rosso,
+                            contenutoColore = Color.White,
+                            modifier = Modifier.weight(1f)
+                        )
+                        BottoneSticker(
+                            testo = "No",
+                            onClick = { chiedeConferma = false },
+                            sfondo = Color.White,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                } else {
+                    BottoneSticker(
+                        testo = "Cancella tutte le giornate",
+                        onClick = { chiedeConferma = true },
+                        sfondo = Color.White,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+
+            Text(
+                "Kids Tracker · i dati non escono da questo telefono",
+                style = MaterialTheme.typography.labelMedium,
+                color = InkTenue,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(Modifier.height(10.dp))
+        }
+    }
+}
+
+@Composable
+private fun PassoOra(testo: String, descrizione: String, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .size(width = 92.dp, height = 46.dp)
+            .sticker(Color.White, 15.dp, ombra = false)
+            .clickable(role = Role.Button, onClickLabel = descrizione, onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(testo, style = MaterialTheme.typography.labelLarge)
+    }
+}
+
+private fun orario(minuti: Int): String {
+    val normalizzati = ((minuti % (24 * 60)) + 24 * 60) % (24 * 60)
+    val ore = normalizzati / 60
+    val resto = normalizzati % 60
+    return "%02d:%02d".format(ore, resto)
+}
+
+private fun nomeFile(estensione: String): String =
+    "kids-tracker-${LocalDate.now()}.$estensione"
+
+private suspend fun scrivi(
+    contesto: Context,
+    uri: Uri,
+    testo: String,
+    conferma: String
+): String = try {
+    withContext(Dispatchers.IO) {
+        contesto.contentResolver.openOutputStream(uri)?.use { flusso ->
+            flusso.write(testo.toByteArray())
+        } ?: error("non scrivibile")
+    }
+    conferma
+} catch (errore: Exception) {
+    "Non sono riuscito a salvare: ${errore.message ?: "errore sconosciuto"}"
+}
