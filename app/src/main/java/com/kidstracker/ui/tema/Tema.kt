@@ -5,6 +5,7 @@ import androidx.compose.material3.Typography
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -93,12 +94,14 @@ fun tintaGiudizio(giudizio: Giudizio): Color = when (giudizio) {
 
 // ---- tipografia ----------------------------------------------------------------------
 
+@OptIn(ExperimentalTextApi::class)
 private fun fredoka(peso: Int) = Font(
     resId = R.font.fredoka,
     weight = FontWeight(peso),
     variationSettings = FontVariation.Settings(FontVariation.weight(peso))
 )
 
+@OptIn(ExperimentalTextApi::class)
 private fun figtree(peso: Int) = Font(
     resId = R.font.figtree,
     weight = FontWeight(peso),

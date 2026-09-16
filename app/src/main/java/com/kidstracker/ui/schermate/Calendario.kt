@@ -133,7 +133,7 @@ private fun GrigliaMese(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            DayOfWeek.entries.forEach { giorno ->
+            DayOfWeek.values().forEach { giorno ->
                 Text(
                     Formati.inizialeGiornoSettimana(giorno),
                     style = MaterialTheme.typography.headlineSmall,

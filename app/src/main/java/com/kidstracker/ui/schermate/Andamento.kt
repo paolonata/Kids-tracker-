@@ -168,7 +168,7 @@ fun SchermataAndamento(
                 tintaTestata = Menta
             ) {
                 val medie = Statistiche.mediaPerGiornoSettimana(sueGiornate)
-                val barre = DayOfWeek.entries
+                val barre = DayOfWeek.values()
                     .filter { it.value <= 5 }
                     .mapNotNull { giorno ->
                         medie[giorno]?.let {
