@@ -118,28 +118,32 @@ object Foto {
      * raddrizza secondo l'orientamento EXIF (le foto di ritratto arrivano
      * quasi sempre ruotate).
      */
-    private fun leggiRidotta(contesto: Context, origine: Uri): Bitmap? = try {
-        val misura = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        contesto.contentResolver.openInputStream(origine)?.use {
-            BitmapFactory.decodeStream(it, null, misura)
-        } ?: return null
+    private fun leggiRidotta(contesto: Context, origine: Uri): Bitmap? {
+        // Corpo a blocco, non a espressione: dentro ci sono dei "return" per
+        // le uscite anticipate, e Kotlin li vieta in una funzione "= try {...}".
+        return try {
+            val misura = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            contesto.contentResolver.openInputStream(origine)?.use {
+                BitmapFactory.decodeStream(it, null, misura)
+            } ?: return null
 
-        if (misura.outWidth <= 0 || misura.outHeight <= 0) return null
+            if (misura.outWidth <= 0 || misura.outHeight <= 0) return null
 
-        val opzioni = BitmapFactory.Options().apply {
-            inSampleSize = campionamento(misura.outWidth, misura.outHeight)
+            val opzioni = BitmapFactory.Options().apply {
+                inSampleSize = campionamento(misura.outWidth, misura.outHeight)
+            }
+            val grezza = contesto.contentResolver.openInputStream(origine)?.use {
+                BitmapFactory.decodeStream(it, null, opzioni)
+            } ?: return null
+
+            val gradi = orientamento(contesto, origine)
+            val raddrizzata = if (gradi == 0f) grezza else ruota(grezza, gradi)
+            riduci(raddrizzata)
+        } catch (errore: Exception) {
+            // Uri scaduta, permesso revocato, provider che non risponde: meglio
+            // nessuna foto che un crash silenzioso dentro una coroutine.
+            null
         }
-        val grezza = contesto.contentResolver.openInputStream(origine)?.use {
-            BitmapFactory.decodeStream(it, null, opzioni)
-        } ?: return null
-
-        val gradi = orientamento(contesto, origine)
-        val raddrizzata = if (gradi == 0f) grezza else ruota(grezza, gradi)
-        riduci(raddrizzata)
-    } catch (errore: Exception) {
-        // Uri scaduta, permesso revocato, provider che non risponde: meglio
-        // nessuna foto che un crash silenzioso dentro una coroutine.
-        null
     }
 
     private fun campionamento(larghezza: Int, altezza: Int): Int {
