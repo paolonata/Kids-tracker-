@@ -10,6 +10,11 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Serve per poter pubblicare la Release qui sotto: senza, il token di default
+# di Actions non ha il permesso di crearla.
+permissions:
+  contents: write
+
 jobs:
   build:
     name: Test e APK di debug
@@ -54,6 +59,29 @@ jobs:
           name: kids-tracker-debug
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
+
+      - name: Rinomina l'APK per la Release
+        if: github.event_name != 'pull_request'
+        run: cp app/build/outputs/apk/debug/app-debug.apk kids-tracker.apk
+
+      # Un file .apk scaricato direttamente si installa con un tocco: niente
+      # zip da estrarre, il problema che ha bloccato il download precedente.
+      # Un'unica release "ultima-build" viene aggiornata a ogni push, così
+      # c'è sempre un solo link fisso da tenere nei preferiti sul telefono.
+      - name: Pubblica l'APK come Release
+        if: github.event_name != 'pull_request'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ultima-build
+          name: Ultima build
+          body: |
+            APK generato automaticamente a ogni push su ${{ github.ref_name }}.
+            Scarica `kids-tracker.apk` e installalo: si aggiorna sopra la
+            versione già installata, senza perdere i dati.
+
+            Commit: ${{ github.sha }}
+          files: kids-tracker.apk
+          make_latest: true
 
       - name: Allega i report dei test se qualcosa è rosso
         if: failure()
