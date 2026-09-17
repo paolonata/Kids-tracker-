@@ -299,7 +299,7 @@ private fun SchedaStriscia(giornate: List<Giornata>) {
                 Text(
                     "$corrente",
                     style = MaterialTheme.typography.displaySmall,
-                    color = Crema
+                    color = InchiostroChiaro
                 )
             }
         }

@@ -56,6 +56,9 @@ object Foto {
         null
     }
 
+    /** Anteprima di una foto appena scelta, prima che esista il bambino a cui darla. */
+    fun anteprima(contesto: Context, origine: Uri): Bitmap? = leggiRidotta(contesto, origine)
+
     fun carica(contesto: Context, nome: String): Bitmap? = try {
         val f = file(contesto, nome)
         if (f.exists()) BitmapFactory.decodeFile(f.absolutePath) else null

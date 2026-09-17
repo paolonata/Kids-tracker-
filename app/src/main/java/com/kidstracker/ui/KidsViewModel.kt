@@ -171,11 +171,29 @@ class KidsViewModel(
 
     // ---- onboarding e impostazioni ----------------------------------------------------
 
-    fun creaBambini(nomi: List<String>, alTermine: () -> Unit = {}) {
-        val puliti = nomi.map { it.trim() }.filter { it.isNotEmpty() }
-        if (puliti.isEmpty()) return
+    /**
+     * [foto] è parallela a [nomi] e può contenere dei buchi: le schede senza
+     * nome vengono scartate insieme alla loro foto, così l'accoppiamento con
+     * gli id restituiti resta corretto.
+     */
+    fun creaBambini(
+        nomi: List<String>,
+        foto: List<Uri?> = emptyList(),
+        alTermine: () -> Unit = {}
+    ) {
+        val schede = nomi.mapIndexed { indice, nome -> nome.trim() to foto.getOrNull(indice) }
+            .filter { (nome, _) -> nome.isNotEmpty() }
+        if (schede.isEmpty()) return
         viewModelScope.launch {
-            repo.creaBambini(puliti)
+            val id = repo.creaBambini(schede.map { it.first })
+            schede.forEachIndexed { indice, (_, origine) ->
+                val bambinoId = id.getOrNull(indice) ?: return@forEachIndexed
+                if (origine == null) return@forEachIndexed
+                val nome = withContext(Dispatchers.IO) {
+                    Foto.importa(contesto, bambinoId, origine)
+                } ?: return@forEachIndexed
+                repo.impostaFoto(bambinoId, nome)
+            }
             _statoAvvio.value = StatoAvvio.Pronta
             alTermine()
         }

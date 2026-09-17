@@ -2,6 +2,7 @@ package com.kidstracker.ui.schermate
 
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -40,9 +41,8 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.text.KeyboardOptions
 import com.kidstracker.data.Backup
-import com.kidstracker.domain.Voto
+import com.kidstracker.ui.componenti.AvatarDaUri
 import com.kidstracker.ui.componenti.BottoneSticker
-import com.kidstracker.ui.componenti.Faccina
 import com.kidstracker.ui.componenti.IconaCestino
 import com.kidstracker.ui.componenti.IconaPiu
 import com.kidstracker.ui.componenti.IntestazionePrugna
@@ -62,12 +62,24 @@ import kotlinx.coroutines.withContext
 
 @Composable
 fun SchermataOnboarding(
-    onConferma: (List<String>) -> Unit,
+    onConferma: (List<String>, List<Uri?>) -> Unit,
     onRipristina: suspend (Backup.Importazione) -> Int,
     modifier: Modifier = Modifier
 ) {
     val nomi = remember { mutableStateListOf("", "") }
+    // Le foto restano dei semplici Uri finché le schede non hanno un id:
+    // il file vero si scrive dopo, quando c'è a chi intestarlo.
+    val foto = remember { mutableStateListOf<Uri?>(null, null) }
     val validi = nomi.count { it.isNotBlank() }
+    var inAttesaDiFoto by remember { mutableStateOf<Int?>(null) }
+
+    val scegliFoto = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri: Uri? ->
+        val indice = inAttesaDiFoto
+        inAttesaDiFoto = null
+        if (uri != null && indice != null && indice in foto.indices) foto[indice] = uri
+    }
     val contesto = LocalContext.current
     val ambito = rememberCoroutineScope()
     var esito by remember { mutableStateOf<String?>(null) }
@@ -109,8 +121,8 @@ fun SchermataOnboarding(
                 Text("I nomi", style = MaterialTheme.typography.headlineSmall)
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    "Servono solo per distinguere le schede: restano su questo telefono " +
-                        "e non escono da qui. Li puoi cambiare quando vuoi.",
+                    "Tocca la faccina per mettere una foto. Nomi e foto restano su " +
+                        "questo telefono e non escono da qui: li puoi cambiare quando vuoi.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = InkTerziario
                 )
@@ -122,12 +134,26 @@ fun SchermataOnboarding(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Faccina(
-                            voto = Voto.SI,
-                            dimensione = 34.dp,
-                            riempimento = coloreBambino(indice),
-                            tratto = InchiostroFaccina
-                        )
+                        Box(
+                            modifier = Modifier.clickable(
+                                role = Role.Button,
+                                onClickLabel = "Scegli la foto del bambino ${indice + 1}"
+                            ) {
+                                inAttesaDiFoto = indice
+                                scegliFoto.launch(
+                                    PickVisualMediaRequest(
+                                        ActivityResultContracts.PickVisualMedia.ImageOnly
+                                    )
+                                )
+                            }
+                        ) {
+                            AvatarDaUri(
+                                origine = foto.getOrNull(indice),
+                                dimensione = 46.dp,
+                                riempimento = coloreBambino(indice),
+                                tratto = InchiostroFaccina
+                            )
+                        }
                         CampoNome(
                             valore = nome,
                             posizione = indice + 1,
@@ -142,7 +168,10 @@ fun SchermataOnboarding(
                                     .clickable(
                                         role = Role.Button,
                                         onClickLabel = "Togli questo nome"
-                                    ) { nomi.removeAt(indice) },
+                                    ) {
+                                        nomi.removeAt(indice)
+                                        if (indice in foto.indices) foto.removeAt(indice)
+                                    },
                                 contentAlignment = Alignment.Center
                             ) {
                                 IconaCestino(InkTenue)
@@ -156,7 +185,10 @@ fun SchermataOnboarding(
                     Row(
                         modifier = Modifier
                             .sticker(Crema, 15.dp, ombra = false)
-                            .clickable(role = Role.Button) { nomi.add("") }
+                            .clickable(role = Role.Button) {
+                                nomi.add("")
+                                foto.add(null)
+                            }
                             .padding(horizontal = 14.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -169,7 +201,7 @@ fun SchermataOnboarding(
 
             BottoneSticker(
                 testo = "Cominciamo",
-                onClick = { onConferma(nomi.toList()) },
+                onClick = { onConferma(nomi.toList(), foto.toList()) },
                 abilitato = validi > 0,
                 modifier = Modifier.fillMaxWidth()
             )

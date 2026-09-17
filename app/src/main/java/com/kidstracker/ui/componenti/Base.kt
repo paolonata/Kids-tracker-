@@ -35,9 +35,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.kidstracker.ui.tema.Coriandoli
-import com.kidstracker.ui.tema.Crema
 import com.kidstracker.ui.tema.Giallo
 import com.kidstracker.ui.tema.Inchiostro
+import com.kidstracker.ui.tema.InchiostroChiaro
+import com.kidstracker.ui.tema.inchiostroSu
 import com.kidstracker.ui.tema.InkSecondario
 import com.kidstracker.ui.tema.InkTerziario
 import com.kidstracker.ui.tema.Misure
@@ -171,9 +172,10 @@ fun BottoneSticker(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     sfondo: Color = Giallo,
-    contenutoColore: Color = Inchiostro,
+    contenutoColore: Color? = null,
     abilitato: Boolean = true
 ) {
+    val tinta = contenutoColore ?: inchiostroSu(sfondo)
     Box(
         modifier = modifier
             .heightIn(min = 56.dp)
@@ -185,7 +187,7 @@ fun BottoneSticker(
         Text(
             testo,
             style = MaterialTheme.typography.headlineSmall,
-            color = if (abilitato) contenutoColore else InkSecondario,
+            color = if (abilitato) tinta else InkSecondario,
             textAlign = TextAlign.Center
         )
     }
@@ -198,8 +200,9 @@ fun PillolaScelta(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     coloreSelezione: Color = Inchiostro,
-    coloreTestoSelezionato: Color = Crema
+    coloreTestoSelezionato: Color? = null
 ) {
+    val tintaScelta = coloreTestoSelezionato ?: inchiostroSu(coloreSelezione)
     Box(
         modifier = modifier
             .heightIn(min = 46.dp)
@@ -215,7 +218,7 @@ fun PillolaScelta(
         Text(
             testo,
             style = MaterialTheme.typography.labelLarge,
-            color = if (selezionata) coloreTestoSelezionato else Inchiostro,
+            color = if (selezionata) tintaScelta else Inchiostro,
             textAlign = TextAlign.Center
         )
     }
@@ -267,7 +270,7 @@ fun IntestazionePrugna(
                     } else {
                         MaterialTheme.typography.displayMedium
                     },
-                    color = Crema
+                    color = InchiostroChiaro
                 )
                 if (sottotitolo != null) {
                     Text(
@@ -301,7 +304,7 @@ fun BottoneContornato(
     attivo: Boolean = true,
     contenuto: @Composable (Color) -> Unit
 ) {
-    val colore = if (attivo) Crema else PrugnaSpenta
+    val colore = if (attivo) InchiostroChiaro else PrugnaSpenta
     Box(
         modifier = modifier
             .size(44.dp)

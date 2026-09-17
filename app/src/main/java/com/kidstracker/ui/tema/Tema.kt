@@ -2,6 +2,7 @@ package com.kidstracker.ui.tema
 
 import android.app.Activity
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
@@ -12,6 +13,7 @@ import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.TextStyle
@@ -52,6 +54,12 @@ data class Palette(
     val sfondo: Color,
     val superficie: Color,
     val inchiostro: Color,
+    /**
+     * L'inchiostro chiaro: quello che sta sopra la fascia prugna e sopra le
+     * tinte piene. Resta chiaro in tutti e due i temi, al contrario di
+     * [sfondo], che nel tema scuro diventa quasi nero.
+     */
+    val inchiostroChiaro: Color,
     val ombra: Color,
     val testata: Color,
     val testataChiara: Color,
@@ -88,6 +96,7 @@ val PaletteChiara = Palette(
     sfondo = Color(0xFFFFF6E9),
     superficie = Color(0xFFFFFFFF),
     inchiostro = Color(0xFF231428),
+    inchiostroChiaro = Color(0xFFFFF6E9),
     ombra = Color(0xFF231428),
     testata = Color(0xFF3B1F49),
     testataChiara = Color(0xFFD7B9E8),
@@ -132,6 +141,7 @@ val PaletteScura = Palette(
     sfondo = Color(0xFF181320),
     superficie = Color(0xFF241C2E),
     inchiostro = Color(0xFFF7EFE4),
+    inchiostroChiaro = Color(0xFFF7EFE4),
     ombra = Color(0xFF0B0810),
     testata = Color(0xFF34203F),
     testataChiara = Color(0xFFC9A9DC),
@@ -178,6 +188,12 @@ val LocalPalette = staticCompositionLocalOf { PaletteChiara }
 val Crema: Color @Composable @ReadOnlyComposable get() = LocalPalette.current.sfondo
 val Superficie: Color @Composable @ReadOnlyComposable get() = LocalPalette.current.superficie
 val Inchiostro: Color @Composable @ReadOnlyComposable get() = LocalPalette.current.inchiostro
+
+/**
+ * L'inchiostro da usare sopra la fascia prugna e sopra le tinte piene.
+ * Non è [Crema]: quello è lo sfondo della pagina e nel tema scuro è quasi nero.
+ */
+val InchiostroChiaro: Color @Composable @ReadOnlyComposable get() = LocalPalette.current.inchiostroChiaro
 val Ombra: Color @Composable @ReadOnlyComposable get() = LocalPalette.current.ombra
 val Prugna: Color @Composable @ReadOnlyComposable get() = LocalPalette.current.testata
 val PrugnaChiara: Color @Composable @ReadOnlyComposable get() = LocalPalette.current.testataChiara
@@ -252,8 +268,25 @@ fun inchiostroSuGiudizio(giudizio: Giudizio): Color = when (giudizio) {
     else -> Color(0xFF231428)
 }
 
+/**
+ * L'inchiostro scuro fisso. Serve sopra le tinte che NON cambiano fra i temi
+ * (il giallo dei bottoni, il verde e il rosso delle faccine): lì il colore del
+ * testo non può seguire il tema, o in una delle due varianti sparisce.
+ */
+val InchiostroScuro = Color(0xFF231428)
+
 /** Il tratto delle faccine resta scuro anche col tema scuro: sta sopra tinte piene. */
-val InchiostroFaccina = Color(0xFF231428)
+val InchiostroFaccina = InchiostroScuro
+
+/**
+ * L'inchiostro che si legge sopra [sfondo]: scuro sulle tinte chiare, chiaro su
+ * quelle scure. Evita di dover ricordare, tinta per tinta, quale delle due
+ * segue il tema e quale no.
+ */
+@Composable
+@ReadOnlyComposable
+fun inchiostroSu(sfondo: Color): Color =
+    if (sfondo.luminance() > 0.45f) InchiostroScuro else LocalPalette.current.inchiostroChiaro
 
 /** Il chiaro fisso dentro le faccine, anche col tema scuro. */
 val CremaFaccina = Color(0xFFFFF6E9)
@@ -342,7 +375,12 @@ fun KidsTema(tema: TemaScelto, content: @Composable () -> Unit) {
         }
     }
 
-    CompositionLocalProvider(LocalPalette provides palette) {
+    // Material non tocca LocalContentColor: senza Surface resta nero fisso, e nel
+    // tema scuro tutti i titoli delle carte sparivano sul fondo scuro.
+    CompositionLocalProvider(
+        LocalPalette provides palette,
+        LocalContentColor provides palette.inchiostro
+    ) {
         MaterialTheme(
             colorScheme = if (scuro) {
                 darkColorScheme(

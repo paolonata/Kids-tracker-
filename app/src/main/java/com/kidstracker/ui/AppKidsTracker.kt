@@ -57,7 +57,7 @@ fun AppKidsTracker(vm: KidsViewModel) {
             }
 
             StatoAvvio.ServeOnboarding -> SchermataOnboarding(
-                onConferma = { nomi -> vm.creaBambini(nomi) },
+                onConferma = { nomi, foto -> vm.creaBambini(nomi, foto) },
                 onRipristina = { importazione ->
                     vm.applicaImportazione(importazione, sostituisci = true)
                 }

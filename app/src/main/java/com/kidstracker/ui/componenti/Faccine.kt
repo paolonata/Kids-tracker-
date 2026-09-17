@@ -29,7 +29,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.kidstracker.domain.Voto
-import com.kidstracker.ui.tema.Crema
+import com.kidstracker.ui.tema.CremaFaccina
 import com.kidstracker.ui.tema.Inchiostro
 import com.kidstracker.ui.tema.InchiostroFaccina
 import com.kidstracker.ui.tema.Superficie
@@ -130,7 +130,9 @@ fun SelettoreFaccine(
                                 Modifier
                                     .rotate(-3f)
                                     .ombraPiena(17.dp, dx = 2.dp, dy = 3.dp)
-                                    .background(Crema, RoundedCornerShape(17.dp))
+                                    // Fisso, non il fondo pagina: la faccina scelta
+                                    // resta su carta chiara anche col tema scuro.
+                                    .background(CremaFaccina, RoundedCornerShape(17.dp))
                                     .border(Misure.bordo, Inchiostro, RoundedCornerShape(17.dp))
                             } else {
                                 Modifier.bordoTratteggiato(17.dp, Tratteggio)

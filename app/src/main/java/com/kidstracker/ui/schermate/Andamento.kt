@@ -37,7 +37,6 @@ import com.kidstracker.ui.componenti.SelettoreBambino
 import com.kidstracker.ui.componenti.SerieGrafico
 import com.kidstracker.ui.tema.Azzurrino
 import com.kidstracker.ui.tema.Giallo
-import com.kidstracker.ui.tema.Inchiostro
 import com.kidstracker.ui.tema.InkTerziario
 import com.kidstracker.ui.tema.Lilla
 import com.kidstracker.ui.tema.Menta
@@ -101,9 +100,7 @@ fun SchermataAndamento(
                         selezionata = scelta == periodo,
                         onClick = { onPeriodo(scelta) },
                         modifier = Modifier.weight(1f),
-                        coloreSelezione = Giallo,
-                        // Sul giallo il testo crema sparisce: qui serve l'inchiostro.
-                        coloreTestoSelezionato = Inchiostro
+                        coloreSelezione = Giallo
                     )
                 }
             }
