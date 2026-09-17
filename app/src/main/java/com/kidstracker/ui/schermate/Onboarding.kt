@@ -29,6 +29,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -73,7 +74,12 @@ fun SchermataOnboarding(
     // garantito durare fino a quando si preme "Cominciamo".
     val foto = remember { mutableStateListOf<String?>(null, null) }
     val validi = nomi.count { it.isNotBlank() }
-    var inAttesaDiFoto by remember { mutableStateOf<Int?>(null) }
+    // rememberSaveable, non remember: il selettore di sistema è pesante, e su
+    // molti telefoni Android chiude il processo dell'app per liberare memoria
+    // mentre è aperto. Con "remember" questo valore si perdeva silenziosamente
+    // ogni volta che succedeva, e al ritorno nessun indice risultava in
+    // attesa: la foto veniva scelta ma non si vedeva né dava errore.
+    var inAttesaDiFoto by rememberSaveable { mutableStateOf<Int?>(null) }
     val contesto = LocalContext.current
     val ambito = rememberCoroutineScope()
     var erroreFoto by remember { mutableStateOf<String?>(null) }

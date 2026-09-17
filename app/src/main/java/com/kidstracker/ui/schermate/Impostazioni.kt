@@ -25,6 +25,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -89,7 +90,12 @@ fun SchermataImpostazioni(
     var chiedeConferma by remember { mutableStateOf(false) }
 
     // Un solo selettore di foto per tutti i bambini: si ricorda chi l'ha aperto.
-    var inAttesaDiFoto by remember { mutableStateOf<Long?>(null) }
+    // rememberSaveable, non remember: il selettore di sistema è pesante, e su
+    // molti telefoni Android chiude il processo dell'app per liberare memoria
+    // mentre è aperto. Con "remember" questo valore si perdeva silenziosamente
+    // ogni volta che succedeva, e al ritorno nessun bambino risultava in
+    // attesa: la foto veniva scelta ma non si vedeva né dava errore.
+    var inAttesaDiFoto by rememberSaveable { mutableStateOf<Long?>(null) }
     val scegliFoto = rememberLauncherForActivityResult(
         ActivityResultContracts.PickVisualMedia()
     ) { uri: Uri? ->
