@@ -177,7 +177,9 @@ fun SchermataAndamento(
                     )
                 }
             ) {
-                Categoria.tutte.forEach { categoria ->
+                // Solo l'ordine con cui compaiono le righe qui: Categoria.tutte
+                // resta quella dell'export e delle statistiche, invariata.
+                ORDINE_CATEGORIA_PER_CATEGORIA.forEach { categoria ->
                     val variazione = Statistiche.variazioneCategoria(sueGiornate, categoria, LocalDate.now())
                     val ultimi = generateSequence(LocalDate.now().minusDays(13)) { it.plusDays(1) }
                         .takeWhile { !it.isAfter(LocalDate.now()) }
@@ -235,6 +237,16 @@ fun SchermataAndamento(
         }
     }
 }
+
+/** L'ordine con cui compaiono le righe nella carta "Categoria per categoria". */
+private val ORDINE_CATEGORIA_PER_CATEGORIA = listOf(
+    Categoria.ENTRATA,
+    Categoria.PRIMO,
+    Categoria.SECONDO,
+    Categoria.DOLCE,
+    Categoria.NANNA,
+    Categoria.USCITA
+)
 
 private fun frasePerGiorno(barre: List<BarraGiorno>, nome: String): String {
     if (barre.size < 3) {

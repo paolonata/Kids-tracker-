@@ -344,7 +344,10 @@ private fun RiepilogoMese(tutte: List<Giornata>) {
             Azzurrino,
             Modifier.weight(1f).fillMaxHeight()
         )
-        Riquadro("$striscia", "giorni buoni di fila", Rosa, Modifier.weight(1f).fillMaxHeight())
+        // La stessa striscia di Scoperte.kt: conta i giorni senza rossi, non
+        // solo quelli "Buona" — un giorno così così ma senza rossi la allunga.
+        // L'etichetta deve dirlo, non "buoni", che è un'altra cosa.
+        Riquadro("$striscia", "giorni senza rossi di fila", Rosa, Modifier.weight(1f).fillMaxHeight())
     }
 }
 
