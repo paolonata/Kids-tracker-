@@ -72,7 +72,7 @@ fun SchermataImpostazioni(
     temaCorrente: TemaScelto,
     onTema: (TemaScelto) -> Unit,
     onRinomina: (Bambino, String) -> Unit,
-    onFoto: suspend (Bambino, Uri) -> Boolean,
+    onFoto: suspend (Long, Uri) -> Boolean,
     onRimuoviFoto: (Bambino) -> Unit,
     onPromemoria: (Boolean) -> Unit,
     onOra: (Int) -> Unit,
@@ -99,15 +99,22 @@ fun SchermataImpostazioni(
     val scegliFoto = rememberLauncherForActivityResult(
         ActivityResultContracts.PickVisualMedia()
     ) { uri: Uri? ->
-        val bambino = bambini.firstOrNull { it.id == inAttesaDiFoto }
+        // L'id, non l'oggetto Bambino: chi lo riceve rilegge dal database al
+        // momento giusto, invece di fidarsi della lista che Compose ha già in
+        // mano qui, che appena dopo una ricreazione dell'app può essere
+        // ancora quella vuota di partenza.
+        val idAtteso = inAttesaDiFoto
         inAttesaDiFoto = null
-        if (uri == null || bambino == null) return@rememberLauncherForActivityResult
+        if (uri == null || idAtteso == null) return@rememberLauncherForActivityResult
         ambito.launch {
-            val riuscita = onFoto(bambino, uri)
-            erroreFoto = if (riuscita) {
-                null
-            } else {
-                "Non sono riuscito a leggere quella foto. Riprova, o scegline un'altra."
+            erroreFoto = try {
+                if (onFoto(idAtteso, uri)) {
+                    null
+                } else {
+                    "Non sono riuscito a leggere quella foto. Riprova, o scegline un'altra."
+                }
+            } catch (errore: Exception) {
+                "Errore imprevisto: ${errore.message ?: errore::class.simpleName}"
             }
         }
     }

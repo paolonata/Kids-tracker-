@@ -229,12 +229,21 @@ class KidsViewModel(
     }
 
     /**
-     * Importa la foto scelta dalla galleria. La vecchia si cancella solo dopo
-     * che la nuova è stata scritta, così un errore non lascia il bambino senza.
+     * Importa la foto scelta dalla galleria per il bambino con questo id.
+     *
+     * Prende l'id, non l'oggetto [Bambino]: il selettore di sistema può far
+     * ricreare l'app (la chiude per liberare memoria mentre è aperto), e nel
+     * primo istante dopo la ricreazione la lista in [bambini] può ancora
+     * essere quella vuota di partenza, prima che Room le mandi lo stato vero.
+     * Cercare qui, con una lettura fresca dal database, invece che nella
+     * lista già in mano a Compose, evita che una foto scelta bene si perda
+     * in silenzio proprio in quella finestra.
+     *
      * Restituisce se è andata bene, così la schermata può dirlo se non ci
      * riesce invece di lasciare tutto in silenzio.
      */
-    suspend fun scegliFoto(bambino: Bambino, origine: Uri): Boolean {
+    suspend fun scegliFoto(bambinoId: Long, origine: Uri): Boolean {
+        val bambino = repo.bambini.first().firstOrNull { it.id == bambinoId } ?: return false
         val nuova = withContext(Dispatchers.IO) {
             Foto.importa(contesto, bambino.id, origine)
         } ?: return false

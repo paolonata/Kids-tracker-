@@ -89,18 +89,28 @@ fun SchermataOnboarding(
     ) { uri: Uri? ->
         val indice = inAttesaDiFoto
         inAttesaDiFoto = null
-        if (uri == null || indice == null || indice !in foto.indices) return@rememberLauncherForActivityResult
+        if (uri == null || indice == null) return@rememberLauncherForActivityResult
         ambito.launch {
-            val precedente = foto[indice]
-            val nome = withContext(Dispatchers.IO) {
-                Foto.importaTemporanea(contesto, indice, uri)
-            }
-            if (nome != null) {
-                foto[indice] = nome
-                erroreFoto = null
-                withContext(Dispatchers.IO) { Foto.scartaTemporanea(contesto, precedente) }
-            } else {
-                erroreFoto = "Non sono riuscito a leggere quella foto. Riprova, o scegline un'altra."
+            erroreFoto = try {
+                if (indice !in foto.indices) {
+                    // Non dovrebbe succedere: se capita, meglio dirlo che
+                    // sparire in silenzio come prima di questa correzione.
+                    "Non sono riuscito ad associare la foto a una scheda. Riprova."
+                } else {
+                    val precedente = foto[indice]
+                    val nome = withContext(Dispatchers.IO) {
+                        Foto.importaTemporanea(contesto, indice, uri)
+                    }
+                    if (nome != null) {
+                        foto[indice] = nome
+                        withContext(Dispatchers.IO) { Foto.scartaTemporanea(contesto, precedente) }
+                        null
+                    } else {
+                        "Non sono riuscito a leggere quella foto. Riprova, o scegline un'altra."
+                    }
+                }
+            } catch (errore: Exception) {
+                "Errore imprevisto: ${errore.message ?: errore::class.simpleName}"
             }
         }
     }
