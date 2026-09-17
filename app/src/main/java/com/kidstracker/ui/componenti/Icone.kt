@@ -113,7 +113,12 @@ fun IconaFreccia(
 }
 
 @Composable
-fun IconaImpostazioni(colore: Color, modifier: Modifier = Modifier, dimensione: Dp = 20.dp) {
+fun IconaImpostazioni(
+    colore: Color,
+    modifier: Modifier = Modifier,
+    dimensione: Dp = 20.dp,
+    sfondo: Color = Color.Transparent
+) {
     IconaCanvas(dimensione, modifier) { d, s ->
         listOf(0.26f, 0.5f, 0.74f).forEachIndexed { indice, y ->
             drawLine(colore, Offset(d * 0.13f, d * y), Offset(d * 0.87f, d * y), s, StrokeCap.Round)
@@ -122,8 +127,10 @@ fun IconaImpostazioni(colore: Color, modifier: Modifier = Modifier, dimensione: 
                 1 -> 0.36f
                 else -> 0.58f
             }
-            drawCircle(Color.White, radius = d * 0.11f, center = Offset(d * x, d * y))
-            drawCircle(colore, radius = d * 0.11f, center = Offset(d * x, d * y), style = Stroke(s))
+            if (sfondo != Color.Transparent) {
+                drawCircle(sfondo, radius = d * 0.11f, center = Offset(d * x, d * y))
+            }
+            drawCircle(colore, radius = d * 0.14f, center = Offset(d * x, d * y), style = Stroke(s))
         }
     }
 }

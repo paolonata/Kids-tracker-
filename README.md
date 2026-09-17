@@ -14,7 +14,7 @@ I dati restano sul telefono. L'app non chiede il permesso di internet.
 | **Calendario** | Il mese come un foglio di adesivi: colore, faccina e numero per ogni giornata. |
 | **Andamento** | Media mobile a 7 giorni dei bambini sullo stesso asse, mini-serie per categoria, confronto fra i giorni della settimana. |
 | **Scoperte** | Le frasi già scritte: quanto pesa il malessere sulla pappa, il giorno peggiore per l'entrata, la striscia senza rossi, dove i gemelli divergono. |
-| **Impostazioni** | Nomi, promemoria giornaliero, export JSON/CSV, import, cancellazione. |
+| **Impostazioni** | Nomi, tema chiaro/scuro, promemoria giornaliero, backup, export Excel/CSV. |
 
 ## Come si misura una giornata
 
@@ -30,6 +30,35 @@ di assenza non ha indice e non spezza le strisce, ma nemmeno le allunga.
 Il giudizio di una giornata segue l'indice: **buona** da 67 in su, **così così** da 34 a 66,
 **difficile** sotto 34.
 
+## Backup e ripristino
+
+Da **Impostazioni → Backup** si salva un file `.json` con nomi e storico. Quel file
+si ricarica in due punti: dalle impostazioni, oppure — ed è il caso che conta —
+dal tasto **"Ricarica un backup"** nella schermata di benvenuto, quella che compare
+al primo avvio dopo una reinstallazione. Si reinstalla l'app, si ricarica il file,
+e tutto torna com'era.
+
+Per guardare i dati altrove c'è l'esportazione in **Excel** (`.xlsx`), con tre fogli:
+
+| Foglio | Cosa contiene |
+|---|---|
+| Giornate | Una riga per bambino per giorno, in parole: "sì", "così così", "no". |
+| Punteggi | Gli stessi dati in numeri (0, 1, 2) più gli indici, pronti per i grafici. |
+| Riepilogo | Una riga per bambino: giornate segnate, medie, giornate buone, striscia record. |
+
+Il file `.xlsx` è scritto a mano dall'app (è uno zip con dentro degli XML), così
+non serve una libreria da megabyte per produrre un foglio di calcolo vero.
+C'è anche l'esportazione in CSV, se serve qualcosa di più grezzo.
+
+## Tema chiaro e scuro
+
+Da **Impostazioni → Aspetto**: *Sistema*, *Chiaro* o *Scuro*. Le tre faccine
+(verde, giallo, rosso) hanno lo stesso colore nei due temi — sono il linguaggio
+della scuola, non devono cambiare significato di sera. Cambiano invece i colori
+dei due bambini, perché sul fondo scuro il blu e il magenta chiari perderebbero
+contrasto: entrambe le coppie sono state verificate per restare distinguibili
+anche con daltonismo.
+
 ## Compilare
 
 Serve JDK 17 e l'SDK Android (compileSdk 35). Poi:
@@ -42,31 +71,45 @@ Serve JDK 17 e l'SDK Android (compileSdk 35). Poi:
 ## Installare sul telefono
 
 Ogni push fa girare [il workflow Android](.github/workflows/android.yml), che allega
-l'APK di debug agli artifact della run. Si scarica da lì e si installa (serve abilitare
+l'APK agli artifact della run. Si scarica da lì e si installa (serve abilitare
 l'installazione da origini sconosciute).
 
 Per una versione stabile, basta un tag:
 
 ```bash
-git tag v0.1.0 && git push origin v0.1.0
+git tag v0.2.0 && git push origin v0.2.0
 ```
 
 Il [workflow Release](.github/workflows/release.yml) allega `kids-tracker.apk` alla release
 di GitHub.
 
-### Firmare la release (facoltativo ma consigliato)
+### La firma: perché serve per aggiornare senza disinstallare
 
-Senza firma, ogni build ha una firma diversa e per aggiornare l'app bisogna disinstallarla.
-Per evitarlo, si genera una chiave una volta sola:
+Android accetta di aggiornare un'app solo se la nuova versione è firmata con la
+**stessa chiave** della precedente. Senza una chiave stabile, ogni build della CI
+ne genera una usa e getta, e per installare la versione nuova bisogna disinstallare
+quella vecchia — perdendo i dati.
+
+Per risolverlo si genera una chiave una volta sola e la si mette nei secret del
+repository. Il repository è pubblico, quindi **la chiave non va committata**: sta
+nei secret, che nessun altro può leggere (il `.gitignore` copre già `*.jks`).
 
 ```bash
-keytool -genkey -v -keystore kids.jks -keyalg RSA -keysize 2048 -validity 10000 -alias kids
+keytool -genkeypair -v -keystore kids.jks -storetype PKCS12 -keyalg RSA \
+  -keysize 4096 -validity 10000 -alias kids
 base64 -w0 kids.jks   # il risultato va nel secret KEYSTORE_BASE64
 ```
 
-Poi si aggiungono quattro secret al repository: `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`,
-`KEY_ALIAS`, `KEY_PASSWORD`. Il workflow li usa da solo; se non ci sono, ripiega sull'APK
-di debug. **Il file `.jks` non va committato** (è già nel `.gitignore`).
+Poi si aggiungono quattro secret al repository (Settings → Secrets and variables →
+Actions): `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`.
+
+Da quel momento in poi **anche l'APK di ogni push è firmato con quella chiave**, non
+solo le release: ogni build si installa sopra la precedente. Se i secret non ci sono,
+la build funziona lo stesso ma torna alla firma usa e getta.
+
+Una nota su cosa non si può recuperare: se la chiave si perde, le installazioni
+esistenti non si possono più aggiornare. Vale la pena tenerne una copia da qualche
+parte al sicuro.
 
 ## Com'è fatta
 
@@ -79,7 +122,7 @@ di debug. **Il file `.jks` non va committato** (è già nel `.gitignore`).
 ```
 app/src/main/java/com/kidstracker/
 ├── domain/        Modelli e statistiche — Kotlin puro, testato
-├── data/          Room, repository, preferenze, backup JSON/CSV
+├── data/          Room, repository, preferenze, backup JSON/CSV/XLSX
 ├── notifiche/     Promemoria giornaliero
 └── ui/
     ├── tema/      Colori, tipografia, misure
@@ -94,8 +137,8 @@ restano distinguibili anche con daltonismo (ΔE 15.9 in simulazione protanopia) 
 non si confondono con il rosso/giallo/verde delle faccine. Il verde/giallo/rosso non viene
 mai usato da solo: la forma della bocca porta lo stesso significato del colore.
 
-L'app è solo in tema chiaro: il fondo crema fa parte dell'identità e le faccine colorate
-su fondo scuro perderebbero contrasto.
+Nel tema scuro i due colori diventano `#4D93F0` e `#E45BA6`, riverificati sul fondo
+scuro (ΔE 12.2). Le faccine restano verdi, gialle e rosse in entrambi i temi.
 
 ## Font
 

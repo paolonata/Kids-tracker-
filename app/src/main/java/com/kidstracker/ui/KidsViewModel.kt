@@ -1,5 +1,8 @@
 package com.kidstracker.ui
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -15,6 +18,7 @@ import com.kidstracker.domain.Giornata
 import com.kidstracker.domain.Presenza
 import com.kidstracker.domain.Salute
 import com.kidstracker.domain.Voto
+import com.kidstracker.ui.tema.TemaScelto
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -48,6 +52,15 @@ class KidsViewModel(
 ) : ViewModel() {
 
     private val oggi: LocalDate get() = LocalDate.now()
+
+    /** Il tema scelto vive qui perché serve prima ancora di comporre le schermate. */
+    var tema by mutableStateOf(TemaScelto.daNome(preferenze.temaScelto))
+        private set
+
+    fun impostaTema(nuovo: TemaScelto) {
+        tema = nuovo
+        preferenze.temaScelto = nuovo.name
+    }
 
     val bambini: StateFlow<List<Bambino>> =
         repo.bambini.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())

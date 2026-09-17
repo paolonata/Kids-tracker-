@@ -65,9 +65,17 @@ data class Giornata(
     val completa: Boolean
         get() = presenza != Presenza.SCUOLA || voti.size == Categoria.tutte.size
 
-    /** Quante delle sette cose (presenza + sei faccine) sono state segnate. */
+    /**
+     * Quante delle sette cose (presenza + sei faccine) sono state segnate.
+     * Una giornata mai toccata vale zero: "a scuola" è il valore di partenza,
+     * non una scelta, e contarlo farebbe apparire 1 su 7 senza aver fatto nulla.
+     */
     val segnate: Int
-        get() = if (presenza != Presenza.SCUOLA) TOTALE_SEGNABILI else 1 + voti.size
+        get() = when {
+            vuota -> 0
+            presenza != Presenza.SCUOLA -> TOTALE_SEGNABILI
+            else -> 1 + voti.size
+        }
 
     private fun indice(categorie: List<Categoria>): Int? {
         val presenti = categorie.mapNotNull { voti[it] }

@@ -1,5 +1,8 @@
 package com.kidstracker.ui.schermate
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,9 +24,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.semantics.Role
@@ -32,6 +39,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.text.KeyboardOptions
+import com.kidstracker.data.Backup
 import com.kidstracker.domain.Voto
 import com.kidstracker.ui.componenti.BottoneSticker
 import com.kidstracker.ui.componenti.Faccina
@@ -42,17 +50,46 @@ import com.kidstracker.ui.componenti.SchedaSticker
 import com.kidstracker.ui.componenti.sticker
 import com.kidstracker.ui.tema.Crema
 import com.kidstracker.ui.tema.Inchiostro
+import com.kidstracker.ui.tema.InchiostroFaccina
+import com.kidstracker.ui.tema.Superficie
 import com.kidstracker.ui.tema.InkTenue
+import com.kidstracker.ui.tema.Menta
 import com.kidstracker.ui.tema.InkTerziario
 import com.kidstracker.ui.tema.coloreBambino
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun SchermataOnboarding(
     onConferma: (List<String>) -> Unit,
+    onRipristina: suspend (Backup.Importazione) -> Int,
     modifier: Modifier = Modifier
 ) {
     val nomi = remember { mutableStateListOf("", "") }
     val validi = nomi.count { it.isNotBlank() }
+    val contesto = LocalContext.current
+    val ambito = rememberCoroutineScope()
+    var esito by remember { mutableStateOf<String?>(null) }
+
+    val apriBackup = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        ambito.launch {
+            esito = try {
+                val testo = withContext(Dispatchers.IO) {
+                    contesto.contentResolver.openInputStream(uri)
+                        ?.bufferedReader()?.use { it.readText() }
+                } ?: error("file vuoto")
+                val quante = onRipristina(Backup.importaJson(testo))
+                "Ripristinate $quante giornate"
+            } catch (errore: Exception) {
+                "Non sono riuscito a leggere il backup: " +
+                    (errore.message ?: "formato non riconosciuto")
+            }
+        }
+    }
 
     Column(modifier = modifier.fillMaxSize()) {
         IntestazionePrugna(
@@ -65,10 +102,10 @@ fun SchermataOnboarding(
             modifier = Modifier
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp),
+                .padding(start = 20.dp, end = 20.dp, top = 16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            SchedaSticker(modifier = Modifier.offset(y = (-20).dp)) {
+            SchedaSticker {
                 Text("I nomi", style = MaterialTheme.typography.headlineSmall)
                 Spacer(Modifier.height(6.dp))
                 Text(
@@ -89,7 +126,7 @@ fun SchermataOnboarding(
                             voto = Voto.SI,
                             dimensione = 34.dp,
                             riempimento = coloreBambino(indice),
-                            tratto = Inchiostro
+                            tratto = InchiostroFaccina
                         )
                         CampoNome(
                             valore = nome,
@@ -101,7 +138,7 @@ fun SchermataOnboarding(
                             Box(
                                 modifier = Modifier
                                     .size(46.dp)
-                                    .sticker(Color.White, 15.dp, ombra = false)
+                                    .sticker(Superficie, 15.dp, ombra = false)
                                     .clickable(
                                         role = Role.Button,
                                         onClickLabel = "Togli questo nome"
@@ -136,6 +173,30 @@ fun SchermataOnboarding(
                 abilitato = validi > 0,
                 modifier = Modifier.fillMaxWidth()
             )
+
+            SchedaSticker(sfondo = Menta) {
+                Text("Hai già un backup?", style = MaterialTheme.typography.headlineSmall)
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    "Se stai reinstallando l'app, ricarica qui il file che avevi salvato: " +
+                        "nomi e storico tornano com'erano.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = InkTerziario
+                )
+                Spacer(Modifier.height(13.dp))
+                BottoneSticker(
+                    testo = "Ricarica un backup",
+                    onClick = {
+                        apriBackup.launch(arrayOf("application/json", "text/plain", "*/*"))
+                    },
+                    sfondo = Superficie,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                esito?.let {
+                    Spacer(Modifier.height(11.dp))
+                    Text(it, style = MaterialTheme.typography.bodyMedium, color = InkTerziario)
+                }
+            }
 
             Text(
                 "Nessun account, nessuna connessione: i dati restano nel telefono.",

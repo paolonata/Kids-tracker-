@@ -30,9 +30,11 @@ import com.kidstracker.domain.Bambino
 import com.kidstracker.domain.Voto
 import com.kidstracker.ui.tema.Crema
 import com.kidstracker.ui.tema.Inchiostro
+import com.kidstracker.ui.tema.InchiostroFaccina
 import com.kidstracker.ui.tema.InkSecondario
 import com.kidstracker.ui.tema.InkTenue
 import com.kidstracker.ui.tema.Misure
+import com.kidstracker.ui.tema.Superficie
 import com.kidstracker.ui.tema.coloreBambino
 
 enum class Sezione(val rotta: String, val etichetta: String) {
@@ -48,13 +50,14 @@ fun BarraNavigazione(
     onNaviga: (Sezione) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val bordo = Inchiostro
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .background(Color.White)
+            .background(Superficie)
             .drawBehind {
                 drawRect(
-                    color = Inchiostro,
+                    color = bordo,
                     topLeft = Offset.Zero,
                     size = Size(size.width, Misure.bordo.toPx())
                 )
@@ -119,7 +122,7 @@ fun SelettoreBambino(
                     .weight(1f)
                     .heightIn(min = if (compatto) 44.dp else 56.dp)
                     .sticker(
-                        sfondo = if (attivo) colore else Color.White,
+                        sfondo = if (attivo) colore else Superficie,
                         raggio = if (compatto) 15.dp else 19.dp,
                         ombra = attivo && !compatto
                     )
@@ -133,7 +136,7 @@ fun SelettoreBambino(
                     voto = Voto.SI,
                     dimensione = if (compatto) 20.dp else 26.dp,
                     riempimento = if (attivo) Crema else colore,
-                    tratto = if (attivo) Inchiostro else Color.White
+                    tratto = if (attivo) InchiostroFaccina else Superficie
                 )
                 Text(
                     bambino.nome,

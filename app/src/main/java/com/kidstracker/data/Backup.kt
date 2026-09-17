@@ -3,6 +3,8 @@ package com.kidstracker.data
 import com.kidstracker.domain.Bambino
 import com.kidstracker.domain.Categoria
 import com.kidstracker.domain.Giornata
+import com.kidstracker.domain.Giudizio
+import com.kidstracker.domain.Statistiche
 import com.kidstracker.domain.Presenza
 import com.kidstracker.domain.Salute
 import com.kidstracker.domain.Voto
@@ -137,6 +139,96 @@ object Backup {
         }
         return righe.toString()
     }
+
+
+    // ---- foglio di calcolo -----------------------------------------------------------
+
+    private val NOMI_GIORNI = listOf(
+        "lunedì", "martedì", "mercoledì", "giovedì", "venerdì", "sabato", "domenica"
+    )
+
+    private fun etichetta(voto: Voto?): String = voto?.etichetta ?: ""
+
+    /**
+     * Tre fogli: uno leggibile, uno con gli stessi dati in numeri (per farci
+     * i grafici in Excel) e un riepilogo per bambino.
+     */
+    fun fogliExcel(bambini: List<Bambino>, giornate: List<Giornata>): List<Excel.Foglio> {
+        val perId = bambini.associateBy { it.id }
+        val ordinate = giornate.sortedWith(compareBy({ it.data }, { it.bambinoId }))
+
+        val leggibile = Excel.Foglio(
+            nome = "Giornate",
+            intestazioni = listOf(
+                "bambino", "data", "giorno", "presenza", "nanna", "primo", "secondo",
+                "dolce", "entrata", "uscita", "salute", "indice pappa", "indice giornata", "nota"
+            ),
+            righe = ordinate.map { g ->
+                listOf(
+                    Excel.testo(perId[g.bambinoId]?.nome),
+                    Excel.testo(g.data.toString()),
+                    Excel.testo(NOMI_GIORNI[g.data.dayOfWeek.value - 1]),
+                    Excel.testo(g.presenza.etichetta),
+                    Excel.testo(etichetta(g.voti[Categoria.NANNA])),
+                    Excel.testo(etichetta(g.voti[Categoria.PRIMO])),
+                    Excel.testo(etichetta(g.voti[Categoria.SECONDO])),
+                    Excel.testo(etichetta(g.voti[Categoria.DOLCE])),
+                    Excel.testo(etichetta(g.voti[Categoria.ENTRATA])),
+                    Excel.testo(etichetta(g.voti[Categoria.USCITA])),
+                    Excel.testo(g.salute.etichetta),
+                    Excel.numero(g.indicePappa),
+                    Excel.numero(g.indiceGiornata),
+                    Excel.testo(g.nota)
+                )
+            }
+        )
+
+        val punteggi = Excel.Foglio(
+            nome = "Punteggi",
+            intestazioni = listOf("bambino", "data", "giorno") +
+                Categoria.tutte.map { it.etichetta.lowercase() } +
+                listOf("indice pappa", "indice giornata", "stava poco bene"),
+            righe = ordinate.map { g ->
+                listOf(
+                    Excel.testo(perId[g.bambinoId]?.nome),
+                    Excel.testo(g.data.toString()),
+                    Excel.numero(g.data.dayOfWeek.value)
+                ) + Categoria.tutte.map { Excel.numero(g.voti[it]?.punti) } + listOf(
+                    Excel.numero(g.indicePappa),
+                    Excel.numero(g.indiceGiornata),
+                    Excel.numero(if (g.stavaPocoBene) 1 else 0)
+                )
+            }
+        )
+
+        val riepilogo = Excel.Foglio(
+            nome = "Riepilogo",
+            intestazioni = listOf(
+                "bambino", "giornate segnate", "indice giornata medio", "indice pappa medio",
+                "giornate buone", "così così", "difficili", "assenze", "striscia record"
+            ),
+            righe = bambini.map { bambino ->
+                val sue = ordinate.filter { it.bambinoId == bambino.id && !it.vuota }
+                val indici = sue.mapNotNull { it.indiceGiornata }
+                val pappe = sue.mapNotNull { it.indicePappa }
+                listOf(
+                    Excel.testo(bambino.nome),
+                    Excel.numero(sue.size),
+                    Excel.numero(indici.takeIf { it.isNotEmpty() }?.average()?.arrotonda()),
+                    Excel.numero(pappe.takeIf { it.isNotEmpty() }?.average()?.arrotonda()),
+                    Excel.numero(sue.count { it.giudizio == Giudizio.BUONO }),
+                    Excel.numero(sue.count { it.giudizio == Giudizio.COSI_COSI }),
+                    Excel.numero(sue.count { it.giudizio == Giudizio.DIFFICILE }),
+                    Excel.numero(sue.count { it.presenza == Presenza.ASSENTE }),
+                    Excel.numero(Statistiche.strisciaRecord(sue))
+                )
+            }
+        )
+
+        return listOf(leggibile, punteggi, riepilogo)
+    }
+
+    private fun Double.arrotonda(): Double = Math.round(this * 10.0) / 10.0
 
     private fun campoCsv(valore: String): String =
         if (valore.contains(';') || valore.contains('"') || valore.contains('\n')) {

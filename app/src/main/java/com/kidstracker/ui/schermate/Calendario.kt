@@ -40,11 +40,14 @@ import com.kidstracker.ui.componenti.sticker
 import com.kidstracker.ui.tema.Azzurrino
 import com.kidstracker.ui.tema.Crema
 import com.kidstracker.ui.tema.Inchiostro
+import com.kidstracker.ui.tema.InchiostroFaccina
 import com.kidstracker.ui.tema.InkSecondario
 import com.kidstracker.ui.tema.InkTenue
 import com.kidstracker.ui.tema.InkTerziario
 import com.kidstracker.ui.tema.Menta
 import com.kidstracker.ui.tema.Rosa
+import com.kidstracker.ui.tema.Superficie
+import com.kidstracker.ui.tema.TratteggioTenue
 import com.kidstracker.ui.tema.coloreGiudizio
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -71,17 +74,15 @@ fun SchermataCalendario(
         IntestazionePrugna(
             titolo = Formati.mese(mese.year, mese.monthValue),
             sottotitolo = "${mese.year} · $segnate giornate segnate",
-            azione = {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    BottoneContornato(onMeseIndietro, "Mese precedente") { tinta ->
-                        IconaFreccia(tinta)
-                    }
-                    BottoneContornato(
-                        onClick = onMeseAvanti,
-                        descrizione = "Mese successivo",
-                        attivo = mese.isBefore(YearMonth.now())
-                    ) { tinta -> IconaFreccia(tinta, versoDestra = true) }
+            azioni = {
+                BottoneContornato(onMeseIndietro, "Mese precedente") { tinta ->
+                    IconaFreccia(tinta)
                 }
+                BottoneContornato(
+                    onClick = onMeseAvanti,
+                    descrizione = "Mese successivo",
+                    attivo = mese.isBefore(YearMonth.now())
+                ) { tinta -> IconaFreccia(tinta, versoDestra = true) }
             }
         )
 
@@ -89,21 +90,19 @@ fun SchermataCalendario(
             modifier = Modifier
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp),
+                .padding(start = 20.dp, end = 20.dp, top = 16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             SelettoreBambino(
                 bambini = bambini,
                 selezionatoId = bambino.id,
-                onSeleziona = onSeleziona,
-                modifier = Modifier.offset(y = (-20).dp)
+                onSeleziona = onSeleziona
             )
 
             GrigliaMese(
                 mese = mese,
                 perGiorno = perGiorno,
-                onApriGiorno = onApriGiorno,
-                modifier = Modifier.offset(y = (-6).dp)
+                onApriGiorno = onApriGiorno
             )
 
             Legenda()
@@ -190,7 +189,7 @@ private fun CellaGiorno(
                     giudizio == Giudizio.ASSENTE -> Modifier.bordoTratteggiato(15.dp, InkTenue)
                     registrata -> Modifier.sticker(coloreGiudizio(giudizio), 15.dp, ombra = false)
                     futuro -> Modifier
-                    else -> Modifier.bordoTratteggiato(15.dp, Color(0xFFE3D9C9))
+                    else -> Modifier.bordoTratteggiato(15.dp, TratteggioTenue)
                 }
             )
             .then(
@@ -217,13 +216,13 @@ private fun CellaGiorno(
                 },
                 dimensione = 26.dp,
                 conCerchio = false,
-                tratto = Inchiostro
+                tratto = InchiostroFaccina
             )
         } else {
             Text(
                 giorno.dayOfMonth.toString(),
                 style = MaterialTheme.typography.labelLarge,
-                color = if (futuro) Color(0xFFD6C9B6) else InkTenue
+                color = if (futuro) TratteggioTenue else InkTenue
             )
         }
 
@@ -267,7 +266,7 @@ private fun Legenda() {
                 Row(
                     modifier = Modifier
                         .weight(1f)
-                        .sticker(Color.White, 15.dp, ombra = false)
+                        .sticker(Superficie, 15.dp, ombra = false)
                         .padding(horizontal = 7.dp, vertical = 7.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(5.dp)

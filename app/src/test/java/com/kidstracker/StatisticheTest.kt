@@ -186,8 +186,14 @@ class StatisticheTest {
     }
 
     @Test
+    fun `una giornata mai toccata non conta come iniziata`() {
+        // "A scuola" è il valore di partenza, non una scelta fatta.
+        assertEquals(0, giornata(1).segnate)
+        assertTrue(giornata(1).vuota)
+    }
+
+    @Test
     fun `quante cose sono state segnate`() {
-        assertEquals(1, giornata(1).segnate)
         assertEquals(3, giornata(1, Categoria.PRIMO to Voto.SI, Categoria.NANNA to Voto.NO).segnate)
         assertEquals(
             Giornata.TOTALE_SEGNABILI,

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -40,15 +41,18 @@ import com.kidstracker.ui.tema.Inchiostro
 import com.kidstracker.ui.tema.InkSecondario
 import com.kidstracker.ui.tema.InkTerziario
 import com.kidstracker.ui.tema.Misure
+import com.kidstracker.ui.tema.Ombra
 import com.kidstracker.ui.tema.Prugna
 import com.kidstracker.ui.tema.PrugnaChiara
 import com.kidstracker.ui.tema.PrugnaSpenta
+import com.kidstracker.ui.tema.Superficie
 import com.kidstracker.ui.tema.Tratteggio
 
 /** L'ombra piena spostata: è il dettaglio che fa sembrare gli oggetti ritagliati. */
+@Composable
 fun Modifier.ombraPiena(
     raggio: Dp,
-    colore: Color = Inchiostro,
+    colore: Color = Ombra,
     dx: Dp = Misure.ombraX,
     dy: Dp = Misure.ombraY
 ): Modifier = this.drawBehind {
@@ -61,6 +65,7 @@ fun Modifier.ombraPiena(
 }
 
 /** Il contorno tratteggiato di uno slot vuoto dell'album. */
+@Composable
 fun Modifier.bordoTratteggiato(
     raggio: Dp,
     colore: Color = Tratteggio,
@@ -79,6 +84,7 @@ fun Modifier.bordoTratteggiato(
     )
 }
 
+@Composable
 fun Modifier.sticker(
     sfondo: Color,
     raggio: Dp = Misure.raggioScheda,
@@ -96,7 +102,7 @@ fun Modifier.sticker(
 @Composable
 fun SchedaSticker(
     modifier: Modifier = Modifier,
-    sfondo: Color = Color.White,
+    sfondo: Color = Superficie,
     raggio: Dp = Misure.raggioScheda,
     ombra: Boolean = true,
     padding: Dp = 15.dp,
@@ -112,7 +118,7 @@ fun SchedaSticker(
 }
 
 /**
- * Scheda con la testata colorata a tutta larghezza e il corpo bianco:
+ * Scheda con la testata colorata a tutta larghezza e il corpo neutro:
  * il colore sta nel titolo, l'area dei grafici resta pulita.
  */
 @Composable
@@ -124,10 +130,12 @@ fun SchedaConTestata(
     extraTestata: (@Composable ColumnScope.() -> Unit)? = null,
     contenuto: @Composable ColumnScope.() -> Unit
 ) {
+    val bordo = Inchiostro
+    val spessoreBordo = Misure.bordo
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .sticker(Color.White)
+            .sticker(Superficie)
     ) {
         Column(
             modifier = Modifier
@@ -135,9 +143,9 @@ fun SchedaConTestata(
                 .background(tintaTestata)
                 .drawBehind {
                     drawRect(
-                        color = Inchiostro,
-                        topLeft = Offset(0f, size.height - Misure.bordo.toPx()),
-                        size = Size(size.width, Misure.bordo.toPx())
+                        color = bordo,
+                        topLeft = Offset(0f, size.height - spessoreBordo.toPx()),
+                        size = Size(size.width, spessoreBordo.toPx())
                     )
                 }
                 .padding(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 13.dp)
@@ -169,7 +177,7 @@ fun BottoneSticker(
     Box(
         modifier = modifier
             .heightIn(min = 56.dp)
-            .sticker(if (abilitato) sfondo else Color.White, 20.dp, ombra = abilitato)
+            .sticker(if (abilitato) sfondo else Superficie, 20.dp, ombra = abilitato)
             .clickable(enabled = abilitato, role = Role.Button, onClick = onClick)
             .padding(horizontal = 18.dp, vertical = 14.dp),
         contentAlignment = Alignment.Center
@@ -189,13 +197,14 @@ fun PillolaScelta(
     selezionata: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    coloreSelezione: Color = Inchiostro
+    coloreSelezione: Color = Inchiostro,
+    coloreTestoSelezionato: Color = Crema
 ) {
     Box(
         modifier = modifier
             .heightIn(min = 46.dp)
             .sticker(
-                sfondo = if (selezionata) coloreSelezione else Color.White,
+                sfondo = if (selezionata) coloreSelezione else Superficie,
                 raggio = 15.dp,
                 ombra = false
             )
@@ -206,7 +215,7 @@ fun PillolaScelta(
         Text(
             testo,
             style = MaterialTheme.typography.labelLarge,
-            color = if (selezionata) Crema else Inchiostro,
+            color = if (selezionata) coloreTestoSelezionato else Inchiostro,
             textAlign = TextAlign.Center
         )
     }
@@ -225,70 +234,65 @@ fun FilaCoriandoli(modifier: Modifier = Modifier) {
     }
 }
 
-/** La fascia prugna in cima a ogni schermata. */
+/**
+ * La fascia in cima a ogni schermata. Titolo e sottotitolo stanno in colonna,
+ * i coriandoli chiudono la fascia sotto di loro: niente si sovrappone a niente.
+ */
 @Composable
 fun IntestazionePrugna(
     titolo: String,
     sottotitolo: String? = null,
     modifier: Modifier = Modifier,
     grande: Boolean = false,
-    rigaSopra: (@Composable RowScope.() -> Unit)? = null,
-    azione: (@Composable () -> Unit)? = null
+    azioni: (@Composable RowScope.() -> Unit)? = null
 ) {
-    Box(
+    Column(
         modifier = modifier
             .fillMaxWidth()
             .background(Prugna, RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp))
             .clip(RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp))
             .statusBarsPadding()
-            .padding(start = 20.dp, end = 20.dp, top = 22.dp, bottom = 30.dp)
+            .padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 20.dp)
     ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            if (rigaSopra != null) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    content = rigaSopra
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    titolo,
+                    style = if (grande) {
+                        MaterialTheme.typography.displayLarge
+                    } else {
+                        MaterialTheme.typography.displayMedium
+                    },
+                    color = Crema
                 )
-                Spacer(Modifier.size(16.dp))
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.Top,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
+                if (sottotitolo != null) {
                     Text(
-                        titolo,
-                        style = if (grande) {
-                            MaterialTheme.typography.displayLarge
-                        } else {
-                            MaterialTheme.typography.displayMedium
-                        },
-                        color = Crema
+                        sottotitolo,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = PrugnaChiara,
+                        modifier = Modifier.padding(top = 7.dp)
                     )
-                    if (sottotitolo != null) {
-                        Text(
-                            sottotitolo,
-                            style = MaterialTheme.typography.titleSmall,
-                            color = PrugnaChiara,
-                            modifier = Modifier.padding(top = 7.dp)
-                        )
-                    }
                 }
-                azione?.invoke()
+            }
+            if (azioni != null) {
+                Spacer(Modifier.size(12.dp))
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    content = azioni
+                )
             }
         }
-        FilaCoriandoli(
-            modifier = Modifier
-                .align(Alignment.BottomStart)
-                .padding(start = 2.dp, bottom = 1.dp)
-        )
+        Spacer(Modifier.height(16.dp))
+        FilaCoriandoli()
     }
 }
 
-/** Bottone tondo con il solo contorno chiaro, per le azioni dentro la fascia prugna. */
+/** Bottone tondo col solo contorno chiaro, per le azioni dentro la fascia. */
 @Composable
 fun BottoneContornato(
     onClick: () -> Unit,

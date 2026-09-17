@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kidstracker.ui.tema.Crema
 import com.kidstracker.ui.tema.Figtree
+import com.kidstracker.ui.tema.Griglia
 import com.kidstracker.ui.tema.Inchiostro
 import com.kidstracker.ui.tema.InkSecondario
 import com.kidstracker.ui.tema.InkTerziario
@@ -49,8 +50,6 @@ import com.kidstracker.ui.tema.RossoScuro
 import com.kidstracker.ui.tema.SabbiaTenue
 import com.kidstracker.ui.tema.VerdeScuro
 import kotlin.math.roundToInt
-
-private val GrigliaTenue = Color(0xFFEDE6DA)
 
 data class SerieGrafico(
     val nome: String,
@@ -116,6 +115,10 @@ fun GraficoLinee(
             }
         }
 
+        val cGriglia = Griglia
+        val cAsse = SabbiaTenue
+        val cInk = Inchiostro
+
         Canvas(
             modifier = Modifier
                 .fillMaxWidth()
@@ -148,7 +151,7 @@ fun GraficoLinee(
             listOf(100.0, 50.0, 0.0).forEach { livello ->
                 val yy = y(livello)
                 drawLine(
-                    if (livello == 0.0) SabbiaTenue else GrigliaTenue,
+                    if (livello == 0.0) cAsse else cGriglia,
                     Offset(sinistra, yy),
                     Offset(size.width - 4f, yy),
                     strokeWidth = 1.5f
@@ -162,7 +165,7 @@ fun GraficoLinee(
 
             if (selezione in 0 until quanti) {
                 drawLine(
-                    Inchiostro,
+                    cInk,
                     Offset(x(selezione), alto),
                     Offset(x(selezione), basso),
                     strokeWidth = 1.5f,
@@ -199,7 +202,7 @@ fun GraficoLinee(
                     val centro = Offset(x(ultimoIndice), y(valore))
                     drawCircle(s.colore, radius = 5.5.dp.toPx(), center = centro)
                     drawCircle(
-                        Inchiostro,
+                        cInk,
                         radius = 5.5.dp.toPx(),
                         center = centro,
                         style = Stroke(2.dp.toPx())
@@ -249,9 +252,10 @@ fun MiniBarre(
     colore: Color,
     modifier: Modifier = Modifier
 ) {
+    val cGriglia = Griglia
     Canvas(modifier = modifier.height(34.dp)) {
         val base = size.height - 2f
-        drawLine(GrigliaTenue, Offset(0f, base), Offset(size.width, base), strokeWidth = 1.5f)
+        drawLine(cGriglia, Offset(0f, base), Offset(size.width, base), strokeWidth = 1.5f)
         if (valori.isEmpty()) return@Canvas
         val passo = size.width / valori.size
         val larghezza = (passo - 3f).coerceAtLeast(2f)
@@ -299,6 +303,8 @@ fun BarreGiorni(
         fontSize = 11.sp,
         color = Inchiostro
     )
+    val cAsse = SabbiaTenue
+    val cInk = Inchiostro
 
     Column(modifier = modifier.fillMaxWidth()) {
         Canvas(
@@ -308,7 +314,7 @@ fun BarreGiorni(
         ) {
             val base = size.height - 2f
             val alto = 20f
-            drawLine(SabbiaTenue, Offset(0f, base), Offset(size.width, base), strokeWidth = 1.5f)
+            drawLine(cAsse, Offset(0f, base), Offset(size.width, base), strokeWidth = 1.5f)
             val passo = size.width / barre.size
             val larghezza = (passo * 0.62f).coerceAtMost(46.dp.toPx())
             barre.forEachIndexed { indice, barra ->
@@ -322,7 +328,7 @@ fun BarreGiorni(
                     cornerRadius = CornerRadius(7.dp.toPx(), 7.dp.toPx())
                 )
                 drawRoundRect(
-                    color = Inchiostro,
+                    color = cInk,
                     topLeft = Offset(x, y),
                     size = Size(larghezza, altezza),
                     cornerRadius = CornerRadius(7.dp.toPx(), 7.dp.toPx()),
@@ -389,15 +395,17 @@ fun BarraDivergente(
     coloreSinistra: Color,
     modifier: Modifier = Modifier
 ) {
+    val cTraccia = Crema
+    val cInk = Inchiostro
     Canvas(
         modifier = modifier
             .fillMaxWidth()
             .height(14.dp)
     ) {
         val raggio = CornerRadius(7f, 7f)
-        drawRoundRect(Crema, size = size, cornerRadius = raggio)
+        drawRoundRect(cTraccia, size = size, cornerRadius = raggio)
         drawRoundRect(
-            Inchiostro,
+            cInk,
             size = size,
             cornerRadius = raggio,
             style = Stroke(Misure.bordo.toPx())
@@ -415,7 +423,7 @@ fun BarraDivergente(
             )
         }
         drawLine(
-            Inchiostro,
+            cInk,
             Offset(centro, -2f),
             Offset(centro, size.height + 2f),
             strokeWidth = Misure.bordo.toPx()

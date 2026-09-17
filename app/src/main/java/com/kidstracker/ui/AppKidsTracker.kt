@@ -57,7 +57,14 @@ fun AppKidsTracker(vm: KidsViewModel) {
             }
 
             StatoAvvio.ServeOnboarding -> SchermataOnboarding(
-                onConferma = { nomi -> vm.creaBambini(nomi) }
+                onConferma = { nomi -> vm.creaBambini(nomi) },
+                onRipristina = { importazione ->
+                    vm.applicaImportazione(
+                        importazione.nomiBambini,
+                        importazione.giornate,
+                        sostituisci = true
+                    )
+                }
             )
 
             StatoAvvio.Pronta -> ContenutoPrincipale(vm)
@@ -123,6 +130,7 @@ private fun ContenutoPrincipale(vm: KidsViewModel) {
                     onNota = vm::impostaNota,
                     onApriCalendario = { vaiA(Sezione.CALENDARIO) },
                     onOggi = { vm.tornaAOggi() },
+                    onImpostazioni = { nav.navigate(ROTTA_IMPOSTAZIONI) },
                     modifier = Modifier.fillMaxSize()
                 )
             }
@@ -152,6 +160,7 @@ private fun ContenutoPrincipale(vm: KidsViewModel) {
                     storico = storico,
                     onSeleziona = vm::seleziona,
                     onPeriodo = vm::impostaPeriodo,
+                    onImpostazioni = { nav.navigate(ROTTA_IMPOSTAZIONI) },
                     modifier = Modifier.fillMaxSize()
                 )
             }
@@ -171,6 +180,8 @@ private fun ContenutoPrincipale(vm: KidsViewModel) {
                     bambini = bambini,
                     promemoriaAttivo = promemoriaAttivo,
                     oraPromemoria = oraPromemoria,
+                    temaCorrente = vm.tema,
+                    onTema = vm::impostaTema,
                     onRinomina = vm::rinomina,
                     onPromemoria = { attivo ->
                         promemoriaAttivo = attivo

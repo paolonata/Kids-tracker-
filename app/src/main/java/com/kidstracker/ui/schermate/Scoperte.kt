@@ -33,19 +33,19 @@ import com.kidstracker.ui.componenti.SchedaSticker
 import com.kidstracker.ui.componenti.StrisciaGiorni
 import com.kidstracker.ui.componenti.sticker
 import com.kidstracker.ui.tema.Azzurrino
+import com.kidstracker.ui.tema.BluTenue
 import com.kidstracker.ui.tema.Crema
 import com.kidstracker.ui.tema.InkTerziario
 import com.kidstracker.ui.tema.Lilla
 import com.kidstracker.ui.tema.Menta
 import com.kidstracker.ui.tema.Rosa
+import com.kidstracker.ui.tema.Superficie
 import com.kidstracker.ui.tema.Verde
 import com.kidstracker.ui.tema.coloreBambino
 import com.kidstracker.ui.tema.coloreGiudizio
 import com.kidstracker.ui.Formati
 import kotlin.math.abs
 import kotlin.math.roundToInt
-
-private val BluChiaro = Color(0xFF86B6EF)
 
 @Composable
 fun SchermataScoperte(
@@ -67,7 +67,7 @@ fun SchermataScoperte(
             } else {
                 "su $segnate giornate segnate"
             },
-            azione = {
+            azioni = {
                 BottoneContornato(onImpostazioni, "Apri le impostazioni") { tinta ->
                     IconaImpostazioni(tinta)
                 }
@@ -78,13 +78,11 @@ fun SchermataScoperte(
             modifier = Modifier
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp),
+                .padding(start = 20.dp, end = 20.dp, top = 16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Spacer(Modifier.height(0.dp))
-
             if (sue.size < 5) {
-                SchedaSticker(sfondo = Azzurrino, modifier = Modifier.offset(y = (-20).dp)) {
+                SchedaSticker(sfondo = Azzurrino) {
                     Text(
                         "Ci vuole ancora un po'",
                         style = MaterialTheme.typography.headlineMedium
@@ -101,7 +99,7 @@ fun SchermataScoperte(
                 return@Column
             }
 
-            SchedaSalute(sue, bambino, Modifier.offset(y = (-20).dp))
+            SchedaSalute(sue, bambino)
             SchedaEntrata(sue, bambino)
             SchedaStriscia(sue)
             if (bambini.size >= 2) SchedaGemelli(bambini, storico)
@@ -150,7 +148,7 @@ private fun SchedaSalute(giornate: List<Giornata>, bambino: Bambino, modifier: M
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .sticker(Color.White, 16.dp, ombra = false)
+                .sticker(Superficie, 16.dp, ombra = false)
                 .padding(13.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
@@ -164,7 +162,7 @@ private fun SchedaSalute(giornate: List<Giornata>, bambino: Bambino, modifier: M
                 "Giorni in cui stava poco bene",
                 confronto.mediaPocoBene,
                 confronto.giorniPocoBene,
-                BluChiaro
+                BluTenue
             )
         }
     }
@@ -233,7 +231,7 @@ private fun SchedaEntrata(giornate: List<Giornata>, bambino: Bambino) {
                 Column(
                     modifier = Modifier
                         .weight(1f)
-                        .sticker(Color.White, 15.dp, ombra = false)
+                        .sticker(Superficie, 15.dp, ombra = false)
                         .padding(vertical = 9.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
@@ -357,7 +355,7 @@ private fun SchedaGemelli(bambini: List<Bambino>, storico: List<Giornata>) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .sticker(Color.White, 16.dp, ombra = false)
+                .sticker(Superficie, 16.dp, ombra = false)
                 .padding(13.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {

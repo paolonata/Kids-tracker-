@@ -27,8 +27,8 @@ android {
         applicationId = "com.kidstracker"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "0.2.0"
     }
 
     signingConfigs {
@@ -45,6 +45,12 @@ android {
     buildTypes {
         debug {
             isMinifyEnabled = false
+            // Se il keystore è configurato firmiamo anche il debug con la stessa
+            // chiave: così l'APK di ogni build si installa sopra il precedente
+            // invece di costringere a disinstallare.
+            if (firmaDisponibile()) {
+                signingConfig = signingConfigs.getByName("rilascio")
+            }
         }
         release {
             isMinifyEnabled = true

@@ -31,6 +31,8 @@ import androidx.compose.ui.unit.dp
 import com.kidstracker.domain.Voto
 import com.kidstracker.ui.tema.Crema
 import com.kidstracker.ui.tema.Inchiostro
+import com.kidstracker.ui.tema.InchiostroFaccina
+import com.kidstracker.ui.tema.Superficie
 import com.kidstracker.ui.tema.Misure
 import com.kidstracker.ui.tema.Tratteggio
 import com.kidstracker.ui.tema.coloreVoto
@@ -145,8 +147,8 @@ fun SelettoreFaccine(
                     Faccina(
                         voto = voto,
                         dimensione = lato * 0.66f,
-                        riempimento = if (selezionato) coloreVoto(voto) else Color.White,
-                        tratto = if (selezionato) Inchiostro else Tratteggio,
+                        riempimento = if (selezionato) coloreVoto(voto) else Superficie,
+                        tratto = if (selezionato) InchiostroFaccina else Tratteggio,
                         modifier = Modifier.clearAndSetSemantics { }
                     )
                 }

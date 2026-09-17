@@ -16,6 +16,11 @@ class Preferenze(context: Context) {
         get() = prefs.getInt(CHIAVE_ORA, 17 * 60 + 30)
         set(valore) = prefs.edit().putInt(CHIAVE_ORA, valore.coerceIn(0, 24 * 60 - 1)).apply()
 
+    /** Nome del tema scelto: lo interpreta il livello UI. */
+    var temaScelto: String
+        get() = prefs.getString(CHIAVE_TEMA, "SISTEMA") ?: "SISTEMA"
+        set(valore) = prefs.edit().putString(CHIAVE_TEMA, valore).apply()
+
     val ore: Int get() = oraPromemoria / 60
     val minuti: Int get() = oraPromemoria % 60
 
@@ -23,5 +28,6 @@ class Preferenze(context: Context) {
         const val NOME = "preferenze"
         private const val CHIAVE_PROMEMORIA = "promemoria_attivo"
         private const val CHIAVE_ORA = "promemoria_ora"
+        private const val CHIAVE_TEMA = "tema"
     }
 }

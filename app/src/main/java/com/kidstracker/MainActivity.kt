@@ -15,8 +15,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            KidsTema {
-                val vm: KidsViewModel = viewModel(factory = KidsViewModel.Factory)
+            val vm: KidsViewModel = viewModel(factory = KidsViewModel.Factory)
+            KidsTema(vm.tema) {
                 AppKidsTracker(vm)
             }
         }

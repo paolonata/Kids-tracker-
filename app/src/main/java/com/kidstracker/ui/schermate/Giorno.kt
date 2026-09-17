@@ -40,6 +40,7 @@ import com.kidstracker.ui.componenti.BottoneContornato
 import com.kidstracker.ui.componenti.BottoneSticker
 import com.kidstracker.ui.componenti.Faccina
 import com.kidstracker.ui.componenti.IconaCalendario
+import com.kidstracker.ui.componenti.IconaImpostazioni
 import com.kidstracker.ui.componenti.PillolaScelta
 import com.kidstracker.ui.componenti.SchedaSticker
 import com.kidstracker.ui.componenti.SelettoreBambino
@@ -48,6 +49,8 @@ import com.kidstracker.ui.componenti.IntestazionePrugna
 import com.kidstracker.ui.componenti.sticker
 import com.kidstracker.ui.tema.Azzurrino
 import com.kidstracker.ui.tema.Crema
+import com.kidstracker.ui.tema.CremaFaccina
+import com.kidstracker.ui.tema.InchiostroFaccina
 import com.kidstracker.ui.tema.Inchiostro
 import com.kidstracker.ui.tema.InkSecondario
 import com.kidstracker.ui.tema.InkTenue
@@ -74,6 +77,7 @@ fun SchermataGiorno(
     onNota: (Long, String) -> Unit,
     onApriCalendario: () -> Unit,
     onOggi: () -> Unit,
+    onImpostazioni: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val bambino = bambinoCorrente ?: return
@@ -87,11 +91,14 @@ fun SchermataGiorno(
             titolo = Formati.titolo(data),
             sottotitolo = Formati.sottotitolo(data),
             grande = eOggi,
-            azione = {
+            azioni = {
                 BottoneContornato(
                     onClick = if (eOggi) onApriCalendario else onOggi,
                     descrizione = if (eOggi) "Apri il calendario" else "Torna a oggi"
                 ) { tinta -> IconaCalendario(tinta, dimensione = 20.dp) }
+                BottoneContornato(onImpostazioni, "Apri le impostazioni") { tinta ->
+                    IconaImpostazioni(tinta)
+                }
             }
         )
 
@@ -99,14 +106,13 @@ fun SchermataGiorno(
             modifier = Modifier
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp),
+                .padding(start = 20.dp, end = 20.dp, top = 16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             SelettoreBambino(
                 bambini = bambini,
                 selezionatoId = bambino.id,
                 onSeleziona = onSeleziona,
-                modifier = Modifier.offset(y = (-20).dp),
                 etichettaExtra = { altro ->
                     val sua = giornate.firstOrNull { it.bambinoId == altro.id }
                     "${sua?.segnate ?: 0}/${Giornata.TOTALE_SEGNABILI}"
@@ -116,8 +122,7 @@ fun SchermataGiorno(
             BarraAvanzamento(
                 fatti = giornata.segnate,
                 totale = Giornata.TOTALE_SEGNABILI,
-                colore = colore,
-                modifier = Modifier.offset(y = (-6).dp)
+                colore = colore
             )
 
             giornata.indiceGiornata?.let { indice ->
@@ -137,8 +142,8 @@ fun SchermataGiorno(
                             else -> Voto.NO
                         },
                         dimensione = 58.dp,
-                        riempimento = Crema,
-                        tratto = Inchiostro
+                        riempimento = CremaFaccina,
+                        tratto = InchiostroFaccina
                     )
                     Column(modifier = Modifier.weight(1f)) {
                         Text(

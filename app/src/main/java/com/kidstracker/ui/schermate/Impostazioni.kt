@@ -33,6 +33,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.kidstracker.data.Backup
+import com.kidstracker.data.Excel
 import com.kidstracker.domain.Bambino
 import com.kidstracker.domain.Giornata
 import com.kidstracker.domain.Voto
@@ -46,7 +47,12 @@ import com.kidstracker.ui.componenti.PillolaScelta
 import com.kidstracker.ui.componenti.SchedaSticker
 import com.kidstracker.ui.componenti.sticker
 import com.kidstracker.ui.tema.Crema
+import com.kidstracker.ui.tema.Lilla
+import com.kidstracker.ui.tema.Menta
+import com.kidstracker.ui.tema.TemaScelto
 import com.kidstracker.ui.tema.Inchiostro
+import com.kidstracker.ui.tema.InchiostroFaccina
+import com.kidstracker.ui.tema.Superficie
 import com.kidstracker.ui.tema.InkTenue
 import com.kidstracker.ui.tema.InkTerziario
 import com.kidstracker.ui.tema.Rosso
@@ -62,6 +68,8 @@ fun SchermataImpostazioni(
     bambini: List<Bambino>,
     promemoriaAttivo: Boolean,
     oraPromemoria: Int,
+    temaCorrente: TemaScelto,
+    onTema: (TemaScelto) -> Unit,
     onRinomina: (Bambino, String) -> Unit,
     onPromemoria: (Boolean) -> Unit,
     onOra: (Int) -> Unit,
@@ -98,6 +106,27 @@ fun SchermataImpostazioni(
         }
     }
 
+    val salvaExcel = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument(
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+    ) { uri: Uri? ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        ambito.launch {
+            val (elenco, giornate) = onEsporta()
+            messaggio = try {
+                withContext(Dispatchers.IO) {
+                    contesto.contentResolver.openOutputStream(uri)?.use { flusso ->
+                        Excel.scrivi(flusso, Backup.fogliExcel(elenco, giornate))
+                    } ?: error("non scrivibile")
+                }
+                "${giornate.size} giornate nel foglio Excel"
+            } catch (errore: Exception) {
+                "Non sono riuscito a salvare: ${errore.message ?: "errore sconosciuto"}"
+            }
+        }
+    }
+
     val apriJson = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
@@ -120,7 +149,7 @@ fun SchermataImpostazioni(
         IntestazionePrugna(
             titolo = "Impostazioni",
             sottotitolo = "nomi, promemoria e backup",
-            azione = {
+            azioni = {
                 BottoneContornato(onIndietro, "Torna indietro") { tinta -> IconaFreccia(tinta) }
             }
         )
@@ -129,10 +158,10 @@ fun SchermataImpostazioni(
             modifier = Modifier
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp),
+                .padding(start = 20.dp, end = 20.dp, top = 16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            SchedaSticker(modifier = Modifier.offset(y = (-20).dp)) {
+            SchedaSticker {
                 Text("I bambini", style = MaterialTheme.typography.headlineSmall)
                 bambini.forEach { bambino ->
                     Spacer(Modifier.height(12.dp))
@@ -145,7 +174,7 @@ fun SchermataImpostazioni(
                             voto = Voto.SI,
                             dimensione = 34.dp,
                             riempimento = coloreBambino(bambino.coloreIndex),
-                            tratto = Inchiostro
+                            tratto = InchiostroFaccina
                         )
                         CampoNome(
                             valore = nome,
@@ -154,6 +183,28 @@ fun SchermataImpostazioni(
                                 nome = it
                                 onRinomina(bambino, it)
                             },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+            }
+
+            SchedaSticker(sfondo = Lilla) {
+                Text("Aspetto", style = MaterialTheme.typography.headlineSmall)
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    "Il tema scuro usa gli stessi colori delle faccine: cambia lo sfondo, " +
+                        "non il significato.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = InkTerziario
+                )
+                Spacer(Modifier.height(12.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                    TemaScelto.entries.forEach { scelta ->
+                        PillolaScelta(
+                            testo = scelta.etichetta,
+                            selezionata = scelta == temaCorrente,
+                            onClick = { onTema(scelta) },
                             modifier = Modifier.weight(1f)
                         )
                     }
@@ -212,32 +263,49 @@ fun SchermataImpostazioni(
                 }
             }
 
-            SchedaSticker {
+            SchedaSticker(sfondo = Menta) {
                 Text("Backup", style = MaterialTheme.typography.headlineSmall)
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    "Il JSON si può reimportare senza perdere nulla. Il CSV serve per " +
-                        "aprire i dati in un foglio di calcolo.",
+                    "Salva il backup e potrai disinstallare l'app, reinstallarla e " +
+                        "ritrovare tutto lo storico: al primo avvio c'è il tasto per ricaricarlo.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = InkTerziario
                 )
                 Spacer(Modifier.height(13.dp))
+                BottoneSticker(
+                    testo = "Salva il backup",
+                    onClick = { salvaJson.launch(nomeFile("json")) },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(9.dp))
+                BottoneSticker(
+                    testo = "Ricarica un backup",
+                    onClick = { apriJson.launch(arrayOf("application/json", "text/plain", "*/*")) },
+                    sfondo = Superficie,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(16.dp))
+                Text("Per guardarli altrove", style = MaterialTheme.typography.titleSmall)
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    "Il file Excel ha tre fogli: le giornate in chiaro, gli stessi dati in " +
+                        "numeri per i grafici, e un riepilogo per bambino.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = InkTerziario
+                )
+                Spacer(Modifier.height(11.dp))
                 Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
                     BottoneSticker(
-                        testo = "Esporta JSON",
-                        onClick = { salvaJson.launch(nomeFile("json")) },
+                        testo = "Esporta in Excel",
+                        onClick = { salvaExcel.launch(nomeFile("xlsx")) },
+                        sfondo = Superficie,
                         modifier = Modifier.fillMaxWidth()
                     )
                     BottoneSticker(
-                        testo = "Esporta CSV",
+                        testo = "Esporta in CSV",
                         onClick = { salvaCsv.launch(nomeFile("csv")) },
-                        sfondo = Crema,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    BottoneSticker(
-                        testo = "Importa da JSON",
-                        onClick = { apriJson.launch(arrayOf("application/json", "text/plain", "*/*")) },
-                        sfondo = Crema,
+                        sfondo = Superficie,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -273,7 +341,7 @@ fun SchermataImpostazioni(
                         BottoneSticker(
                             testo = "No",
                             onClick = { chiedeConferma = false },
-                            sfondo = Color.White,
+                            sfondo = Superficie,
                             modifier = Modifier.weight(1f)
                         )
                     }
@@ -281,7 +349,7 @@ fun SchermataImpostazioni(
                     BottoneSticker(
                         testo = "Cancella tutte le giornate",
                         onClick = { chiedeConferma = true },
-                        sfondo = Color.White,
+                        sfondo = Superficie,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -303,7 +371,7 @@ private fun PassoOra(testo: String, descrizione: String, onClick: () -> Unit) {
     Box(
         modifier = Modifier
             .size(width = 92.dp, height = 46.dp)
-            .sticker(Color.White, 15.dp, ombra = false)
+            .sticker(Superficie, 15.dp, ombra = false)
             .clickable(role = Role.Button, onClickLabel = descrizione, onClick = onClick),
         contentAlignment = Alignment.Center
     ) {

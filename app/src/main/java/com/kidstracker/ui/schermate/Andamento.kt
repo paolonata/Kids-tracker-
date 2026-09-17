@@ -24,6 +24,8 @@ import com.kidstracker.domain.Statistiche
 import com.kidstracker.ui.Formati
 import com.kidstracker.ui.Periodo
 import com.kidstracker.ui.componenti.BarraGiorno
+import com.kidstracker.ui.componenti.BottoneContornato
+import com.kidstracker.ui.componenti.IconaImpostazioni
 import com.kidstracker.ui.componenti.BarreGiorni
 import com.kidstracker.ui.componenti.EtichettaDelta
 import com.kidstracker.ui.componenti.GraficoLinee
@@ -50,6 +52,7 @@ fun SchermataAndamento(
     storico: List<Giornata>,
     onSeleziona: (Long) -> Unit,
     onPeriodo: (Periodo) -> Unit,
+    onImpostazioni: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val bambino = bambinoCorrente ?: return
@@ -75,20 +78,22 @@ fun SchermataAndamento(
     Column(modifier = modifier) {
         IntestazionePrugna(
             titolo = "Andamento",
-            sottotitolo = "come stanno cambiando le cose"
+            sottotitolo = "come stanno cambiando le cose",
+            azioni = {
+                BottoneContornato(onImpostazioni, "Apri le impostazioni") { tinta ->
+                    IconaImpostazioni(tinta)
+                }
+            }
         )
 
         Column(
             modifier = Modifier
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp),
+                .padding(start = 20.dp, end = 20.dp, top = 16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Row(
-                modifier = Modifier.offset(y = (-20).dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Periodo.entries.forEach { scelta ->
                     PillolaScelta(
                         testo = scelta.etichetta,
@@ -103,8 +108,7 @@ fun SchermataAndamento(
             SchedaConTestata(
                 titolo = "Indice giornata",
                 sottotitolo = "media mobile a 7 giorni · 0–100%",
-                tintaTestata = Azzurrino,
-                modifier = Modifier.offset(y = (-6).dp)
+                tintaTestata = Azzurrino
             ) {
                 GraficoLinee(serie = serie, etichette = etichette)
                 Spacer(Modifier.height(4.dp))
