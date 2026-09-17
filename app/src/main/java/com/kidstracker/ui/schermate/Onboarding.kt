@@ -98,16 +98,19 @@ fun SchermataOnboarding(
                     "Non sono riuscito ad associare la foto a una scheda. Riprova."
                 } else {
                     val precedente = foto[indice]
-                    val nome = withContext(Dispatchers.IO) {
+                    withContext(Dispatchers.IO) {
                         Foto.importaTemporanea(contesto, indice, uri)
-                    }
-                    if (nome != null) {
-                        foto[indice] = nome
-                        withContext(Dispatchers.IO) { Foto.scartaTemporanea(contesto, precedente) }
-                        null
-                    } else {
-                        "Non sono riuscito a leggere quella foto. Riprova, o scegline un'altra."
-                    }
+                    }.fold(
+                        onSuccess = { nome ->
+                            foto[indice] = nome
+                            ambito.launch(Dispatchers.IO) { Foto.scartaTemporanea(contesto, precedente) }
+                            null
+                        },
+                        onFailure = { errore ->
+                            "Non sono riuscito a leggere quella foto: " +
+                                (errore.message ?: errore::class.simpleName)
+                        }
+                    )
                 }
             } catch (errore: Exception) {
                 "Errore imprevisto: ${errore.message ?: errore::class.simpleName}"

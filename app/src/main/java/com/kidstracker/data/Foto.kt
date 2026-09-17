@@ -8,6 +8,7 @@ import android.media.ExifInterface
 import android.net.Uri
 import android.util.Base64
 import java.io.File
+import java.io.IOException
 
 /**
  * Le foto dei bambini.
@@ -16,6 +17,12 @@ import java.io.File
  * ridotte a 512px e salvate in JPEG. Nella tabella resta solo il nome del file.
  * Il nome porta dentro l'orario di importazione, così quando si cambia foto
  * cambia anche il nome e nessuna cache mostra ancora quella vecchia.
+ *
+ * importa/importaTemporanea restituiscono un [Result] e non un semplice
+ * null in caso di fallimento: un null da solo non dice se il problema è la
+ * Uri scaduta, un formato non decodificabile o lo storage piena, e senza
+ * quel dettaglio un fallimento sul telefono di qualcun altro è impossibile
+ * da diagnosticare da qui.
  */
 object Foto {
 
@@ -28,12 +35,9 @@ object Foto {
 
     fun file(contesto: Context, nome: String): File = File(cartella(contesto), nome)
 
-    /**
-     * Copia la foto scelta dentro l'app e restituisce il nome del file,
-     * oppure null se l'immagine non è leggibile.
-     */
-    fun importa(contesto: Context, bambinoId: Long, origine: Uri): String? {
-        val bitmap = leggiRidotta(contesto, origine) ?: return null
+    /** Copia la foto scelta dentro l'app e restituisce il nome del file. */
+    fun importa(contesto: Context, bambinoId: Long, origine: Uri): Result<String> {
+        val bitmap = leggiRidotta(contesto, origine).getOrElse { return Result.failure(it) }
         return scriviJpeg(contesto, "bambino_${bambinoId}_${System.currentTimeMillis()}.jpg", bitmap)
     }
 
@@ -43,8 +47,8 @@ object Foto {
      * sistema va letta subito, qui, e non più tardi: il permesso su quella Uri
      * non è garantito durare fino a quando l'utente preme "Cominciamo".
      */
-    fun importaTemporanea(contesto: Context, indice: Int, origine: Uri): String? {
-        val bitmap = leggiRidotta(contesto, origine) ?: return null
+    fun importaTemporanea(contesto: Context, indice: Int, origine: Uri): Result<String> {
+        val bitmap = leggiRidotta(contesto, origine).getOrElse { return Result.failure(it) }
         return scriviJpeg(contesto, "tmp_onboarding_${indice}_${System.currentTimeMillis()}.jpg", bitmap)
     }
 
@@ -66,7 +70,7 @@ object Foto {
     /** Toglie il temporaneo se l'onboarding lo sostituisce o non lo usa mai. */
     fun scartaTemporanea(contesto: Context, temporanea: String?) = elimina(contesto, temporanea)
 
-    private fun scriviJpeg(contesto: Context, nome: String, bitmap: Bitmap): String? = try {
+    private fun scriviJpeg(contesto: Context, nome: String, bitmap: Bitmap): Result<String> = try {
         val destinazione = file(contesto, nome)
         destinazione.outputStream().use { flusso ->
             bitmap.compress(Bitmap.CompressFormat.JPEG, QUALITA, flusso)
@@ -75,13 +79,13 @@ object Foto {
         // senza sollevare un'eccezione: qui lo trattiamo come un fallimento,
         // non come una foto che poi risulta semplicemente illeggibile.
         if (destinazione.length() > 0) {
-            nome
+            Result.success(nome)
         } else {
             destinazione.delete()
-            null
+            Result.failure(IOException("Il file scritto è vuoto: spazio esaurito o scrittura interrotta"))
         }
     } catch (errore: Exception) {
-        null
+        Result.failure(errore)
     } finally {
         bitmap.recycle()
     }
@@ -127,31 +131,37 @@ object Foto {
      * raddrizza secondo l'orientamento EXIF (le foto di ritratto arrivano
      * quasi sempre ruotate).
      */
-    private fun leggiRidotta(contesto: Context, origine: Uri): Bitmap? {
-        // Corpo a blocco, non a espressione: dentro ci sono dei "return" per
-        // le uscite anticipate, e Kotlin li vieta in una funzione "= try {...}".
+    private fun leggiRidotta(contesto: Context, origine: Uri): Result<Bitmap> {
         return try {
             val misura = BitmapFactory.Options().apply { inJustDecodeBounds = true }
             contesto.contentResolver.openInputStream(origine)?.use {
                 BitmapFactory.decodeStream(it, null, misura)
-            } ?: return null
+            } ?: return Result.failure(
+                IOException("Il sistema non mi lascia aprire questa foto (openInputStream nullo)")
+            )
 
-            if (misura.outWidth <= 0 || misura.outHeight <= 0) return null
+            if (misura.outWidth <= 0 || misura.outHeight <= 0) {
+                return Result.failure(
+                    IOException("Formato immagine non riconosciuto (${misura.outWidth}×${misura.outHeight})")
+                )
+            }
 
             val opzioni = BitmapFactory.Options().apply {
                 inSampleSize = campionamento(misura.outWidth, misura.outHeight)
             }
             val grezza = contesto.contentResolver.openInputStream(origine)?.use {
                 BitmapFactory.decodeStream(it, null, opzioni)
-            } ?: return null
+            } ?: return Result.failure(
+                IOException("Riletta la foto una seconda volta, ma la decodifica ha dato un'immagine nulla")
+            )
 
             val gradi = orientamento(contesto, origine)
             val raddrizzata = if (gradi == 0f) grezza else ruota(grezza, gradi)
-            riduci(raddrizzata)
+            Result.success(riduci(raddrizzata))
         } catch (errore: Exception) {
-            // Uri scaduta, permesso revocato, provider che non risponde: meglio
-            // nessuna foto che un crash silenzioso dentro una coroutine.
-            null
+            // Uri scaduta, permesso revocato, provider che non risponde: qui
+            // arriva l'eccezione vera, non più schiacciata a un null generico.
+            Result.failure(errore)
         }
     }
 

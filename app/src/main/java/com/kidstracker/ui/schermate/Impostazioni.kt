@@ -72,7 +72,7 @@ fun SchermataImpostazioni(
     temaCorrente: TemaScelto,
     onTema: (TemaScelto) -> Unit,
     onRinomina: (Bambino, String) -> Unit,
-    onFoto: suspend (Long, Uri) -> Boolean,
+    onFoto: suspend (Long, Uri) -> Result<Unit>,
     onRimuoviFoto: (Bambino) -> Unit,
     onPromemoria: (Boolean) -> Unit,
     onOra: (Int) -> Unit,
@@ -108,11 +108,13 @@ fun SchermataImpostazioni(
         if (uri == null || idAtteso == null) return@rememberLauncherForActivityResult
         ambito.launch {
             erroreFoto = try {
-                if (onFoto(idAtteso, uri)) {
-                    null
-                } else {
-                    "Non sono riuscito a leggere quella foto. Riprova, o scegline un'altra."
-                }
+                onFoto(idAtteso, uri).fold(
+                    onSuccess = { null },
+                    onFailure = { errore ->
+                        "Non sono riuscito a leggere quella foto: " +
+                            (errore.message ?: errore::class.simpleName)
+                    }
+                )
             } catch (errore: Exception) {
                 "Errore imprevisto: ${errore.message ?: errore::class.simpleName}"
             }

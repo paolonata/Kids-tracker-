@@ -239,17 +239,19 @@ class KidsViewModel(
      * lista già in mano a Compose, evita che una foto scelta bene si perda
      * in silenzio proprio in quella finestra.
      *
-     * Restituisce se è andata bene, così la schermata può dirlo se non ci
-     * riesce invece di lasciare tutto in silenzio.
+     * Restituisce un [Result]: la schermata può così mostrare il motivo vero
+     * di un fallimento (Uri scaduta, formato non decodificabile, storage
+     * piena...) invece di un "non ci sono riuscito" che non dice nulla.
      */
-    suspend fun scegliFoto(bambinoId: Long, origine: Uri): Boolean {
-        val bambino = repo.bambini.first().firstOrNull { it.id == bambinoId } ?: return false
+    suspend fun scegliFoto(bambinoId: Long, origine: Uri): Result<Unit> {
+        val bambino = repo.bambini.first().firstOrNull { it.id == bambinoId }
+            ?: return Result.failure(IllegalStateException("Bambino non trovato (id=$bambinoId)"))
         val nuova = withContext(Dispatchers.IO) {
             Foto.importa(contesto, bambino.id, origine)
-        } ?: return false
+        }.getOrElse { return Result.failure(it) }
         repo.impostaFoto(bambino.id, nuova)
         withContext(Dispatchers.IO) { Foto.elimina(contesto, bambino.foto) }
-        return true
+        return Result.success(Unit)
     }
 
     fun rimuoviFoto(bambino: Bambino) {
