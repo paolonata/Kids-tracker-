@@ -8,16 +8,35 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
-// Firma di release opzionale: se ci sono le variabili d'ambiente (o keystore.properties)
-// la release viene firmata, altrimenti resta non firmata e si usa l'APK di debug.
+// Firma opzionale. Se il keystore c'è davvero, TUTTE le build (anche quelle di
+// debug) vengono firmate con quella chiave, così ogni APK si installa sopra il
+// precedente invece di costringere a disinstallare. Se non c'è, si ripiega sulla
+// chiave di debug generata al volo e la build funziona comunque.
 val keystorePropertiesFile = rootProject.file("keystore.properties")
 val keystoreProperties = Properties().apply {
     if (keystorePropertiesFile.exists()) load(FileInputStream(keystorePropertiesFile))
 }
 
-fun firmaDisponibile(): Boolean =
-    (System.getenv("KEYSTORE_FILE") != null && System.getenv("KEYSTORE_PASSWORD") != null) ||
-        keystoreProperties.getProperty("storeFile") != null
+// Attenzione: GitHub Actions definisce le variabili dei secret mancanti come
+// stringa VUOTA, non le lascia assenti. Un controllo su != null direbbe di sì
+// anche quando la chiave non c'è, e la build fallirebbe cercando un file
+// inesistente: per questo si scartano anche i valori vuoti.
+fun impostazione(variabile: String, proprieta: String): String? =
+    System.getenv(variabile)?.takeIf { it.isNotBlank() }
+        ?: keystoreProperties.getProperty(proprieta)?.takeIf { it.isNotBlank() }
+
+val percorsoKeystore = impostazione("KEYSTORE_FILE", "storeFile")
+val passwordKeystore = impostazione("KEYSTORE_PASSWORD", "storePassword")
+val aliasChiave = impostazione("KEY_ALIAS", "keyAlias")
+val passwordChiave = impostazione("KEY_PASSWORD", "keyPassword")
+
+val firmaDisponibile: Boolean = run {
+    val percorso = percorsoKeystore ?: return@run false
+    passwordKeystore != null &&
+        aliasChiave != null &&
+        passwordChiave != null &&
+        file(percorso).exists()
+}
 
 android {
     namespace = "com.kidstracker"
@@ -32,12 +51,12 @@ android {
     }
 
     signingConfigs {
-        if (firmaDisponibile()) {
+        if (firmaDisponibile) {
             create("rilascio") {
-                storeFile = file(System.getenv("KEYSTORE_FILE") ?: keystoreProperties.getProperty("storeFile")!!)
-                storePassword = System.getenv("KEYSTORE_PASSWORD") ?: keystoreProperties.getProperty("storePassword")
-                keyAlias = System.getenv("KEY_ALIAS") ?: keystoreProperties.getProperty("keyAlias")
-                keyPassword = System.getenv("KEY_PASSWORD") ?: keystoreProperties.getProperty("keyPassword")
+                storeFile = file(percorsoKeystore!!)
+                storePassword = passwordKeystore
+                keyAlias = aliasChiave
+                keyPassword = passwordChiave
             }
         }
     }
@@ -45,10 +64,7 @@ android {
     buildTypes {
         debug {
             isMinifyEnabled = false
-            // Se il keystore è configurato firmiamo anche il debug con la stessa
-            // chiave: così l'APK di ogni build si installa sopra il precedente
-            // invece di costringere a disinstallare.
-            if (firmaDisponibile()) {
+            if (firmaDisponibile) {
                 signingConfig = signingConfigs.getByName("rilascio")
             }
         }
@@ -56,7 +72,7 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            if (firmaDisponibile()) {
+            if (firmaDisponibile) {
                 signingConfig = signingConfigs.getByName("rilascio")
             }
         }
