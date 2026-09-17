@@ -34,7 +34,7 @@ import com.kidstracker.ui.componenti.StrisciaGiorni
 import com.kidstracker.ui.componenti.sticker
 import com.kidstracker.ui.tema.Azzurrino
 import com.kidstracker.ui.tema.BluTenue
-import com.kidstracker.ui.tema.Crema
+import com.kidstracker.ui.tema.InchiostroChiaro
 import com.kidstracker.ui.tema.InkTerziario
 import com.kidstracker.ui.tema.Lilla
 import com.kidstracker.ui.tema.Menta
