@@ -34,6 +34,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.kidstracker.ui.tema.Coriandoli
 import com.kidstracker.ui.tema.Giallo
 import com.kidstracker.ui.tema.Inchiostro
 import com.kidstracker.ui.tema.InchiostroChiaro
@@ -105,7 +106,7 @@ fun SchedaSticker(
     sfondo: Color = Superficie,
     raggio: Dp = Misure.raggioScheda,
     ombra: Boolean = true,
-    padding: Dp = 10.dp,
+    padding: Dp = 15.dp,
     contenuto: @Composable ColumnScope.() -> Unit
 ) {
     Column(
@@ -148,7 +149,7 @@ fun SchedaConTestata(
                         size = Size(size.width, spessoreBordo.toPx())
                     )
                 }
-                .padding(start = 10.dp, end = 10.dp, top = 9.dp, bottom = 9.dp)
+                .padding(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 13.dp)
         ) {
             Text(titolo, style = MaterialTheme.typography.headlineSmall)
             if (sottotitolo != null) {
@@ -161,7 +162,7 @@ fun SchedaConTestata(
             }
             extraTestata?.invoke(this)
         }
-        Column(modifier = Modifier.padding(10.dp), content = contenuto)
+        Column(modifier = Modifier.padding(14.dp), content = contenuto)
     }
 }
 
@@ -177,10 +178,10 @@ fun BottoneSticker(
     val tinta = contenutoColore ?: inchiostroSu(sfondo)
     Box(
         modifier = modifier
-            .heightIn(min = 48.dp)
-            .sticker(if (abilitato) sfondo else Superficie, 12.dp, ombra = abilitato)
+            .heightIn(min = 56.dp)
+            .sticker(if (abilitato) sfondo else Superficie, 20.dp, ombra = abilitato)
             .clickable(enabled = abilitato, role = Role.Button, onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 18.dp, vertical = 14.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
@@ -207,7 +208,7 @@ fun PillolaScelta(
             .heightIn(min = 46.dp)
             .sticker(
                 sfondo = if (selezionata) coloreSelezione else Superficie,
-                raggio = 10.dp,
+                raggio = 15.dp,
                 ombra = false
             )
             .clickable(role = Role.RadioButton, onClick = onClick)
@@ -223,10 +224,22 @@ fun PillolaScelta(
     }
 }
 
+@Composable
+fun FilaCoriandoli(modifier: Modifier = Modifier) {
+    Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+        Coriandoli.forEach { colore ->
+            Box(
+                modifier = Modifier
+                    .size(9.dp)
+                    .background(colore, RoundedCornerShape(50))
+            )
+        }
+    }
+}
+
 /**
- * La fascia in cima a ogni schermata. Titolo e sottotitolo stanno in colonna;
- * sotto, se presente, la riga delle linguette bambino (foto, nome, stato della
- * giornata) — è lei che chiude la fascia, non più i coriandoli.
+ * La fascia in cima a ogni schermata. Titolo e sottotitolo stanno in colonna,
+ * i coriandoli chiudono la fascia sotto di loro: niente si sovrappone a niente.
  */
 @Composable
 fun IntestazionePrugna(
@@ -234,16 +247,15 @@ fun IntestazionePrugna(
     sottotitolo: String? = null,
     modifier: Modifier = Modifier,
     grande: Boolean = false,
-    azioni: (@Composable RowScope.() -> Unit)? = null,
-    linguette: (@Composable () -> Unit)? = null
+    azioni: (@Composable RowScope.() -> Unit)? = null
 ) {
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(Prugna, RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp))
-            .clip(RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp))
+            .background(Prugna, RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp))
+            .clip(RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp))
             .statusBarsPadding()
-            .padding(start = 14.dp, end = 14.dp, top = 14.dp, bottom = 14.dp)
+            .padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 20.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -265,12 +277,12 @@ fun IntestazionePrugna(
                         sottotitolo,
                         style = MaterialTheme.typography.titleSmall,
                         color = PrugnaChiara,
-                        modifier = Modifier.padding(top = 5.dp)
+                        modifier = Modifier.padding(top = 7.dp)
                     )
                 }
             }
             if (azioni != null) {
-                Spacer(Modifier.size(10.dp))
+                Spacer(Modifier.size(12.dp))
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -278,10 +290,8 @@ fun IntestazionePrugna(
                 )
             }
         }
-        if (linguette != null) {
-            Spacer(Modifier.height(12.dp))
-            linguette()
-        }
+        Spacer(Modifier.height(16.dp))
+        FilaCoriandoli()
     }
 }
 
@@ -297,7 +307,7 @@ fun BottoneContornato(
     val colore = if (attivo) InchiostroChiaro else PrugnaSpenta
     Box(
         modifier = modifier
-            .size(34.dp)
+            .size(44.dp)
             .border(Misure.bordo, colore, RoundedCornerShape(50))
             .clip(RoundedCornerShape(50))
             .clickable(enabled = attivo, role = Role.Button, onClickLabel = descrizione, onClick = onClick),

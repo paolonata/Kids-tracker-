@@ -1,7 +1,5 @@
 package com.kidstracker.ui
 
-import com.kidstracker.domain.Giornata
-import com.kidstracker.domain.Presenza
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -42,14 +40,6 @@ object Formati {
 
     fun inizialeGiornoSettimana(giorno: DayOfWeek): String =
         giorno.getDisplayName(TextStyle.NARROW, italiano).uppercase(italiano).take(1)
-
-    /** Cosa mostrare sotto il nome nella linguetta bambino della fascia. */
-    fun statoGiornata(giornata: Giornata?): String = when {
-        giornata == null || giornata.vuota -> "da segnare"
-        giornata.festiva -> "festivo"
-        giornata.presenza == Presenza.ASSENTE -> "assente"
-        else -> "${giornata.segnate}/${Giornata.TOTALE_SEGNABILI} segnate"
-    }
 
     private fun maiuscola(testo: String): String =
         testo.replaceFirstChar { it.uppercase(italiano) }

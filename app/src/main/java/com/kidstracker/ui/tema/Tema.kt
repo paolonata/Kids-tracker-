@@ -83,21 +83,17 @@ data class Palette(
     val tintaLilla: Color,
     val tintaSabbia: Color,
     val tintaRossa: Color,
-    val bambini: List<Color>
+    val bambini: List<Color>,
+    val coriandoli: List<Color>
 )
 
 private val VerdeFaccina = Color(0xFF17A05E)
 private val GialloFaccina = Color(0xFFF5B324)
 private val RossoFaccina = Color(0xFFE5503C)
 
-// Le cinque tinte pastello delle carte (azzurro, rosa, menta, lilla, sabbia)
-// diventano tutte questo stesso neutro freddo: il colore resta solo dove porta
-// significato (faccine, colori dei bambini), non più a decorare ogni carta.
-private val NeutroCarte = Color(0xFFF1F2F5)
-
 val PaletteChiara = Palette(
     scuro = false,
-    sfondo = Color(0xFFE9EAEE),
+    sfondo = Color(0xFFFFF6E9),
     superficie = Color(0xFFFFFFFF),
     inchiostro = Color(0xFF231428),
     inchiostroChiaro = Color(0xFFFFF6E9),
@@ -108,27 +104,35 @@ val PaletteChiara = Palette(
     inkSecondario = Color(0xFF6B5A73),
     inkTerziario = Color(0xFF4A3B52),
     inkTenue = Color(0xFF8B7A93),
-    tratteggio = Color(0xFFC9CCD4),
-    tratteggioTenue = Color(0xFFDFE1E6),
-    griglia = Color(0xFFEAECF0),
-    asse = Color(0xFFD2D5DB),
+    tratteggio = Color(0xFFC7BCCD),
+    tratteggioTenue = Color(0xFFE3D9C9),
+    griglia = Color(0xFFEDE6DA),
+    asse = Color(0xFFC9BBAA),
     verde = VerdeFaccina,
     giallo = GialloFaccina,
     rosso = RossoFaccina,
     verdeTesto = Color(0xFF0F7A46),
     rossoTesto = Color(0xFFC33A28),
     bluTenue = Color(0xFF86B6EF),
-    tintaAzzurra = NeutroCarte,
-    tintaRosa = NeutroCarte,
-    tintaMenta = NeutroCarte,
-    tintaLilla = NeutroCarte,
-    tintaSabbia = NeutroCarte,
+    tintaAzzurra = Color(0xFFDCEBFF),
+    tintaRosa = Color(0xFFFFE1F0),
+    tintaMenta = Color(0xFFD8F5E5),
+    tintaLilla = Color(0xFFEDE0FF),
+    tintaSabbia = Color(0xFFFFEBC7),
     tintaRossa = Color(0xFFFFE0DB),
     bambini = listOf(
         Color(0xFF1B6FE3),
         Color(0xFFC42A86),
         Color(0xFF7A3BC4),
         Color(0xFF0E7C86)
+    ),
+    coriandoli = listOf(
+        Color(0xFF1B6FE3),
+        Color(0xFFC42A86),
+        Color(0xFF17A05E),
+        Color(0xFFF5B324),
+        Color(0xFFE5503C),
+        Color(0xFF8B45D6)
     )
 )
 
@@ -166,6 +170,14 @@ val PaletteScura = Palette(
         Color(0xFFE45BA6),
         Color(0xFFA77BE8),
         Color(0xFF39AEB8)
+    ),
+    coriandoli = listOf(
+        Color(0xFF4D93F0),
+        Color(0xFFE45BA6),
+        Color(0xFF2FC17B),
+        Color(0xFFF5B324),
+        Color(0xFFF07A66),
+        Color(0xFFA77BE8)
     )
 )
 
@@ -208,6 +220,8 @@ val Menta: Color @Composable @ReadOnlyComposable get() = LocalPalette.current.ti
 val Lilla: Color @Composable @ReadOnlyComposable get() = LocalPalette.current.tintaLilla
 val Sabbia: Color @Composable @ReadOnlyComposable get() = LocalPalette.current.tintaSabbia
 val RossoTenue: Color @Composable @ReadOnlyComposable get() = LocalPalette.current.tintaRossa
+
+val Coriandoli: List<Color> @Composable @ReadOnlyComposable get() = LocalPalette.current.coriandoli
 
 @Composable
 @ReadOnlyComposable
@@ -299,48 +313,44 @@ val Fredoka = FontFamily(fredoka(400), fredoka(500), fredoka(600))
 /** Per tutto il resto: etichette, note, testo corrente. */
 val Figtree = FontFamily(figtree(400), figtree(600), figtree(700), figtree(800))
 
-// Scala compatta: stessi ruoli e nomi di stile, dimensioni ridotte di circa
-// un quarto rispetto alla prima versione, per leggere ogni schermata in un
-// colpo d'occhio invece di dover scorrere.
 val TipografiaKids = Typography(
-    displayLarge = TextStyle(fontFamily = Fredoka, fontWeight = FontWeight.SemiBold, fontSize = 30.sp, lineHeight = 34.sp),
-    displayMedium = TextStyle(fontFamily = Fredoka, fontWeight = FontWeight.SemiBold, fontSize = 24.sp, lineHeight = 28.sp),
-    displaySmall = TextStyle(fontFamily = Fredoka, fontWeight = FontWeight.SemiBold, fontSize = 21.sp, lineHeight = 25.sp),
-    headlineMedium = TextStyle(fontFamily = Fredoka, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, lineHeight = 21.sp),
-    headlineSmall = TextStyle(fontFamily = Fredoka, fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp, lineHeight = 19.sp),
-    titleMedium = TextStyle(fontFamily = Figtree, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp, lineHeight = 17.sp),
-    titleSmall = TextStyle(fontFamily = Figtree, fontWeight = FontWeight.ExtraBold, fontSize = 11.5.sp, lineHeight = 15.sp),
-    bodyLarge = TextStyle(fontFamily = Figtree, fontWeight = FontWeight.SemiBold, fontSize = 12.sp, lineHeight = 17.sp),
-    bodyMedium = TextStyle(fontFamily = Figtree, fontWeight = FontWeight.SemiBold, fontSize = 11.sp, lineHeight = 15.sp),
-    labelLarge = TextStyle(fontFamily = Figtree, fontWeight = FontWeight.ExtraBold, fontSize = 11.sp, lineHeight = 14.sp),
-    labelMedium = TextStyle(fontFamily = Figtree, fontWeight = FontWeight.ExtraBold, fontSize = 10.5.sp, lineHeight = 14.sp),
-    labelSmall = TextStyle(fontFamily = Figtree, fontWeight = FontWeight.ExtraBold, fontSize = 10.5.sp, lineHeight = 14.sp)
+    displayLarge = TextStyle(fontFamily = Fredoka, fontWeight = FontWeight.SemiBold, fontSize = 42.sp, lineHeight = 46.sp),
+    displayMedium = TextStyle(fontFamily = Fredoka, fontWeight = FontWeight.SemiBold, fontSize = 34.sp, lineHeight = 38.sp),
+    displaySmall = TextStyle(fontFamily = Fredoka, fontWeight = FontWeight.SemiBold, fontSize = 30.sp, lineHeight = 34.sp),
+    headlineMedium = TextStyle(fontFamily = Fredoka, fontWeight = FontWeight.SemiBold, fontSize = 22.sp, lineHeight = 27.sp),
+    headlineSmall = TextStyle(fontFamily = Fredoka, fontWeight = FontWeight.SemiBold, fontSize = 19.sp, lineHeight = 24.sp),
+    titleMedium = TextStyle(fontFamily = Figtree, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, lineHeight = 21.sp),
+    titleSmall = TextStyle(fontFamily = Figtree, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp, lineHeight = 19.sp),
+    bodyLarge = TextStyle(fontFamily = Figtree, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, lineHeight = 22.sp),
+    bodyMedium = TextStyle(fontFamily = Figtree, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, lineHeight = 19.sp),
+    labelLarge = TextStyle(fontFamily = Figtree, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp, lineHeight = 17.sp),
+    labelMedium = TextStyle(fontFamily = Figtree, fontWeight = FontWeight.ExtraBold, fontSize = 11.sp, lineHeight = 15.sp),
+    labelSmall = TextStyle(fontFamily = Figtree, fontWeight = FontWeight.ExtraBold, fontSize = 10.sp, lineHeight = 13.sp)
 )
 
 /**
  * Le etichettine tutte maiuscole ("PRESENZA", "NOTA", "COSÌ COSÌ"). Le maiuscole
  * attaccate si leggono male: un filo di spaziatura fra le lettere le separa.
- * Sotto i 10,5sp non si scende: è già al limite di leggibilità.
  */
 val MicroEtichetta = TextStyle(
     fontFamily = Figtree,
     fontWeight = FontWeight.ExtraBold,
-    fontSize = 10.5.sp,
-    lineHeight = 14.sp,
+    fontSize = 11.sp,
+    lineHeight = 15.sp,
     letterSpacing = 0.06.em
 )
 
-/** Come [MicroEtichetta], per le colonne strette sopra le faccine. */
-val MicroEtichettaStretta = MicroEtichetta
+/** Come [MicroEtichetta], ma per le colonne strette sopra le faccine. */
+val MicroEtichettaStretta = MicroEtichetta.copy(fontSize = 10.sp, lineHeight = 13.sp)
 
 // ---- misure ricorrenti ---------------------------------------------------------------
 
 object Misure {
-    val bordo = 1.5.dp
-    val raggioScheda = 13.dp
-    val raggioPiccolo = 12.dp
-    val ombraX = 2.dp
-    val ombraY = 2.dp
+    val bordo = 2.dp
+    val raggioScheda = 22.dp
+    val raggioPiccolo = 16.dp
+    val ombraX = 3.dp
+    val ombraY = 4.dp
     val toccoMinimo = 48.dp
 }
 

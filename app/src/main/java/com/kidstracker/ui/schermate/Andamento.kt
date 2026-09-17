@@ -115,8 +115,8 @@ fun SchermataAndamento(
             modifier = Modifier
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
-                .padding(start = 14.dp, end = 14.dp, top = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(9.dp)
+                .padding(start = 20.dp, end = 20.dp, top = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             if (meseAndamento == null) {
                 // Sono sei pillole: su un telefono stretto non ci stanno tutte

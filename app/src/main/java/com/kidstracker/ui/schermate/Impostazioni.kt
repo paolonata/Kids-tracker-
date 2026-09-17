@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -48,7 +47,6 @@ import com.kidstracker.ui.componenti.IconaOrologio
 import com.kidstracker.ui.componenti.IntestazionePrugna
 import com.kidstracker.ui.componenti.PillolaScelta
 import com.kidstracker.ui.componenti.SchedaSticker
-import com.kidstracker.ui.componenti.bordoTratteggiato
 import com.kidstracker.ui.componenti.sticker
 import com.kidstracker.ui.tema.Crema
 import com.kidstracker.ui.tema.Lilla
@@ -208,71 +206,77 @@ fun SchermataImpostazioni(
             modifier = Modifier
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
-                .padding(start = 14.dp, end = 14.dp, top = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(9.dp)
+                .padding(start = 20.dp, end = 20.dp, top = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             SchedaSticker {
                 Text("I bambini", style = MaterialTheme.typography.headlineSmall)
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    "Tocca la foto per cambiarla: resta su questo telefono e non esce mai " +
-                        "dall'app.",
+                    "Tocca la faccina per mettere la loro foto: resta su questo telefono " +
+                        "e finisce nel backup insieme allo storico.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = InkTerziario
                 )
                 bambini.forEach { bambino ->
-                    Spacer(Modifier.height(10.dp))
+                    Spacer(Modifier.height(12.dp))
                     var nome by remember(bambino.id) { mutableStateOf(bambino.nome) }
-                    fun apriSelettore() {
-                        inAttesaDiFoto = bambino.id
-                        scegliFoto.launch(
-                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier.clickable(
+                                role = Role.Button,
+                                onClickLabel = "Scegli la foto di ${bambino.nome}"
+                            ) {
+                                inAttesaDiFoto = bambino.id
+                                scegliFoto.launch(
+                                    PickVisualMediaRequest(
+                                        ActivityResultContracts.PickVisualMedia.ImageOnly
+                                    )
+                                )
+                            }
+                        ) {
+                            AvatarBambino(
+                                foto = bambino.foto,
+                                dimensione = 46.dp,
+                                riempimento = coloreBambino(bambino.coloreIndex),
+                                tratto = InchiostroFaccina
+                            )
+                        }
+                        CampoNome(
+                            valore = nome,
+                            posizione = bambino.coloreIndex + 1,
+                            onCambia = {
+                                nome = it
+                                onRinomina(bambino, it)
+                            },
+                            modifier = Modifier.weight(1f)
                         )
                     }
-                    SchedaSticker(sfondo = Crema) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier.clickable(
-                                    role = Role.Button,
-                                    onClickLabel = "Scegli la foto di ${bambino.nome}",
-                                    onClick = ::apriSelettore
-                                )
-                            ) {
-                                AvatarBambino(
-                                    foto = bambino.foto,
-                                    dimensione = 72.dp,
-                                    riempimento = coloreBambino(bambino.coloreIndex),
-                                    tratto = InchiostroFaccina
-                                )
-                            }
-                            Column(modifier = Modifier.weight(1f)) {
-                                CampoNome(
-                                    valore = nome,
-                                    posizione = bambino.coloreIndex + 1,
-                                    onCambia = {
-                                        nome = it
-                                        onRinomina(bambino, it)
-                                    },
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-                                Spacer(Modifier.height(8.dp))
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    BottonePiccolo(
-                                        testo = if (bambino.foto == null) "Scegli una foto" else "Cambia foto",
-                                        onClick = ::apriSelettore
+                    Spacer(Modifier.height(7.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                        BottoneSticker(
+                            testo = if (bambino.foto == null) "Scegli una foto" else "Cambia foto",
+                            onClick = {
+                                inAttesaDiFoto = bambino.id
+                                scegliFoto.launch(
+                                    PickVisualMediaRequest(
+                                        ActivityResultContracts.PickVisualMedia.ImageOnly
                                     )
-                                    if (bambino.foto != null) {
-                                        BottonePiccolo(
-                                            testo = "Togli la foto",
-                                            onClick = { onRimuoviFoto(bambino) },
-                                            tratteggiato = true
-                                        )
-                                    }
-                                }
-                            }
+                                )
+                            },
+                            sfondo = Superficie,
+                            modifier = Modifier.weight(1f)
+                        )
+                        if (bambino.foto != null) {
+                            BottoneSticker(
+                                testo = "Togli",
+                                onClick = { onRimuoviFoto(bambino) },
+                                sfondo = Crema,
+                                modifier = Modifier.weight(1f)
+                            )
                         }
                     }
                 }
@@ -457,31 +461,6 @@ fun SchermataImpostazioni(
             )
             Spacer(Modifier.height(10.dp))
         }
-    }
-}
-
-/** Un bottone piccolo, largo solo quanto il suo testo: per le due azioni della foto. */
-@Composable
-private fun BottonePiccolo(
-    testo: String,
-    onClick: () -> Unit,
-    tratteggiato: Boolean = false
-) {
-    Box(
-        modifier = Modifier
-            .heightIn(min = 36.dp)
-            .then(
-                if (tratteggiato) {
-                    Modifier.bordoTratteggiato(10.dp, Inchiostro)
-                } else {
-                    Modifier.sticker(Superficie, 10.dp, ombra = false)
-                }
-            )
-            .clickable(role = Role.Button, onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(testo, style = MaterialTheme.typography.labelLarge, color = Inchiostro)
     }
 }
 

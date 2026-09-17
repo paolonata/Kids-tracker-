@@ -108,7 +108,7 @@ fun SelettoreFaccine(
     valore: Voto?,
     onCambia: (Voto) -> Unit,
     modifier: Modifier = Modifier,
-    lato: Dp = 40.dp
+    lato: Dp = 52.dp
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),

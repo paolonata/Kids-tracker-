@@ -1,7 +1,6 @@
 package com.kidstracker.ui.componenti
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -26,12 +25,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.kidstracker.domain.Bambino
 import com.kidstracker.ui.tema.Crema
 import com.kidstracker.ui.tema.Inchiostro
-import com.kidstracker.ui.tema.InchiostroChiaro
 import com.kidstracker.ui.tema.InchiostroFaccina
 import com.kidstracker.ui.tema.InkSecondario
 import com.kidstracker.ui.tema.InkTenue
@@ -157,72 +154,6 @@ fun SelettoreBambino(
                         extra,
                         style = MaterialTheme.typography.labelMedium,
                         color = if (attivo) Crema else InkTenue
-                    )
-                }
-            }
-        }
-    }
-}
-
-/**
- * Le linguette bambino della fascia in cima: foto tonda da 46dp, nome e lo
- * stato della giornata sotto. È la fascia stessa a fare da selettore, quindi
- * non serve più nessun selettore dentro il corpo di Oggi e Calendario.
- */
-@Composable
-fun LinguetteBambino(
-    bambini: List<Bambino>,
-    selezionatoId: Long?,
-    onSeleziona: (Long) -> Unit,
-    stato: (Bambino) -> String,
-    modifier: Modifier = Modifier
-) {
-    if (bambini.isEmpty()) return
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        bambini.forEach { bambino ->
-            val attivo = bambino.id == selezionatoId
-            val colore = coloreBambino(bambino.coloreIndex)
-            val fondo = if (attivo) colore else InchiostroChiaro.copy(alpha = 0.07f)
-            val bordo = if (attivo) InchiostroChiaro else InchiostroChiaro.copy(alpha = 0.26f)
-            val testo = if (attivo) InchiostroChiaro else InchiostroChiaro.copy(alpha = 0.66f)
-            val forma = RoundedCornerShape(Misure.raggioScheda)
-            Row(
-                modifier = Modifier
-                    .weight(1f)
-                    .heightIn(min = Misure.toccoMinimo)
-                    .background(fondo, forma)
-                    .border(Misure.bordo, bordo, forma)
-                    .clip(forma)
-                    .clickable(role = Role.Tab) { onSeleziona(bambino.id) }
-                    .semantics { selected = attivo }
-                    .padding(horizontal = 8.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                AvatarBambino(
-                    foto = bambino.foto,
-                    dimensione = 46.dp,
-                    riempimento = colore,
-                    tratto = InchiostroFaccina,
-                    bordo = if (attivo) InchiostroChiaro else InchiostroChiaro.copy(alpha = 0.4f)
-                )
-                Column(modifier = Modifier.weight(1f, fill = false)) {
-                    Text(
-                        bambino.nome,
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = testo,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Text(
-                        stato(bambino),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = testo.copy(alpha = testo.alpha * 0.78f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }

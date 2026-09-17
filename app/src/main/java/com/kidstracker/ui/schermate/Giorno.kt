@@ -48,9 +48,9 @@ import com.kidstracker.ui.componenti.BottoneSticker
 import com.kidstracker.ui.componenti.Faccina
 import com.kidstracker.ui.componenti.IconaCalendario
 import com.kidstracker.ui.componenti.IconaImpostazioni
-import com.kidstracker.ui.componenti.LinguetteBambino
 import com.kidstracker.ui.componenti.PillolaScelta
 import com.kidstracker.ui.componenti.SchedaSticker
+import com.kidstracker.ui.componenti.SelettoreBambino
 import com.kidstracker.ui.componenti.SelettoreFaccine
 import com.kidstracker.ui.componenti.IntestazionePrugna
 import com.kidstracker.ui.componenti.sticker
@@ -61,7 +61,6 @@ import com.kidstracker.ui.tema.InchiostroFaccina
 import com.kidstracker.ui.tema.Inchiostro
 import com.kidstracker.ui.tema.InkSecondario
 import com.kidstracker.ui.tema.InkTenue
-import com.kidstracker.ui.tema.Menta
 import com.kidstracker.ui.tema.MicroEtichetta
 import com.kidstracker.ui.tema.MicroEtichettaStretta
 import com.kidstracker.ui.tema.Rosa
@@ -110,14 +109,6 @@ fun SchermataGiorno(
                 BottoneContornato(onImpostazioni, "Apri le impostazioni") { tinta ->
                     IconaImpostazioni(tinta)
                 }
-            },
-            linguette = {
-                LinguetteBambino(
-                    bambini = bambini,
-                    selezionatoId = bambino.id,
-                    onSeleziona = onSeleziona,
-                    stato = { altro -> Formati.statoGiornata(giornate.firstOrNull { it.bambinoId == altro.id }) }
-                )
             }
         )
 
@@ -129,9 +120,19 @@ fun SchermataGiorno(
                 // più la finestra da solo alla comparsa della tastiera:
                 // senza questo, il campo nota resta coperto sotto di lei.
                 .imePadding()
-                .padding(start = 14.dp, end = 14.dp, top = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(9.dp)
+                .padding(start = 20.dp, end = 20.dp, top = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
+            SelettoreBambino(
+                bambini = bambini,
+                selezionatoId = bambino.id,
+                onSeleziona = onSeleziona,
+                etichettaExtra = { altro ->
+                    val sua = giornate.firstOrNull { it.bambinoId == altro.id }
+                    "${sua?.segnate ?: 0}/${Giornata.TOTALE_SEGNABILI}"
+                }
+            )
+
             BarraAvanzamento(
                 fatti = giornata.segnate,
                 totale = Giornata.TOTALE_SEGNABILI,
@@ -212,23 +213,11 @@ fun SchermataGiorno(
                     )
                 }
             } else {
-                // L'ordine della giornata scolastica: entrata, poi a pranzo,
-                // poi nanna e uscita. Ogni carta fa da sola una sola cosa.
                 SchedaSticker(sfondo = Azzurrino) {
-                    Text("Entrata", style = MaterialTheme.typography.headlineSmall)
-                    Spacer(Modifier.height(9.dp))
-                    SelettoreFaccine(
-                        etichetta = Categoria.ENTRATA.etichetta,
-                        valore = giornata.voti[Categoria.ENTRATA],
-                        onCambia = { voto -> onVoto(bambino.id, Categoria.ENTRATA, voto) }
-                    )
-                }
-
-                SchedaSticker(sfondo = Rosa) {
-                    Text("A pranzo", style = MaterialTheme.typography.headlineSmall)
+                    Text("Pappa e nanna", style = MaterialTheme.typography.headlineSmall)
                     Spacer(Modifier.height(9.dp))
                     IntestazioneColonne()
-                    Categoria.pasti.forEach { categoria ->
+                    Categoria.nannaEPappa.forEach { categoria ->
                         Spacer(Modifier.height(8.dp))
                         SelettoreFaccine(
                             etichetta = categoria.etichetta,
@@ -238,9 +227,9 @@ fun SchermataGiorno(
                     }
                 }
 
-                SchedaSticker(sfondo = Menta) {
-                    Text("Nanna e uscita", style = MaterialTheme.typography.headlineSmall)
-                    Categoria.nannaEUscita.forEach { categoria ->
+                SchedaSticker(sfondo = Rosa) {
+                    Text("Entrata e uscita", style = MaterialTheme.typography.headlineSmall)
+                    Categoria.porta.forEach { categoria ->
                         Spacer(Modifier.height(10.dp))
                         SelettoreFaccine(
                             etichetta = categoria.etichetta,
