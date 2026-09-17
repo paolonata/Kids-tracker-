@@ -176,10 +176,20 @@ object Excel {
         return lettere.toString()
     }
 
-    /** Excel rifiuta certi caratteri nei nomi dei fogli e non ne accetta più di 31. */
+    private val VIETATI_NEI_NOMI = charArrayOf('\\', '/', '?', '*', '[', ']', ':')
+
+    /**
+     * Excel rifiuta certi caratteri nei nomi dei fogli e non ne accetta più di 31.
+     * Li sostituiamo con uno spazio invece di cancellarli, altrimenti
+     * "Per/bambino" diventerebbe "Perbambino".
+     */
     internal fun nomeFoglio(nome: String): String {
-        val pulito = nome.filterNot { it in charArrayOf('\\', '/', '?', '*', '[', ']', ':') }
-        return pulito.take(31).ifEmpty { "Foglio" }
+        val pulito = nome
+            .map { if (it in VIETATI_NEI_NOMI) ' ' else it }
+            .joinToString("")
+            .replace(Regex("\\s+"), " ")
+            .trim()
+        return pulito.take(31).trim().ifEmpty { "Foglio" }
     }
 
     internal fun escape(testo: String): String = buildString(testo.length) {
