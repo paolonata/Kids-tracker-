@@ -41,7 +41,8 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.text.KeyboardOptions
 import com.kidstracker.data.Backup
-import com.kidstracker.ui.componenti.AvatarDaUri
+import com.kidstracker.data.Foto
+import com.kidstracker.ui.componenti.AvatarBambino
 import com.kidstracker.ui.componenti.BottoneSticker
 import com.kidstracker.ui.componenti.IconaCestino
 import com.kidstracker.ui.componenti.IconaPiu
@@ -62,26 +63,41 @@ import kotlinx.coroutines.withContext
 
 @Composable
 fun SchermataOnboarding(
-    onConferma: (List<String>, List<Uri?>) -> Unit,
+    onConferma: (List<String>, List<String?>) -> Unit,
     onRipristina: suspend (Backup.Importazione) -> Int,
     modifier: Modifier = Modifier
 ) {
     val nomi = remember { mutableStateListOf("", "") }
-    // Le foto restano dei semplici Uri finché le schede non hanno un id:
-    // il file vero si scrive dopo, quando c'è a chi intestarlo.
-    val foto = remember { mutableStateListOf<Uri?>(null, null) }
+    // La foto diventa subito un file vero (nome qui dentro), non resta una Uri
+    // in attesa: il permesso di lettura che dà il selettore di sistema non è
+    // garantito durare fino a quando si preme "Cominciamo".
+    val foto = remember { mutableStateListOf<String?>(null, null) }
     val validi = nomi.count { it.isNotBlank() }
     var inAttesaDiFoto by remember { mutableStateOf<Int?>(null) }
+    val contesto = LocalContext.current
+    val ambito = rememberCoroutineScope()
+    var erroreFoto by remember { mutableStateOf<String?>(null) }
 
     val scegliFoto = rememberLauncherForActivityResult(
         ActivityResultContracts.PickVisualMedia()
     ) { uri: Uri? ->
         val indice = inAttesaDiFoto
         inAttesaDiFoto = null
-        if (uri != null && indice != null && indice in foto.indices) foto[indice] = uri
+        if (uri == null || indice == null || indice !in foto.indices) return@rememberLauncherForActivityResult
+        ambito.launch {
+            val precedente = foto[indice]
+            val nome = withContext(Dispatchers.IO) {
+                Foto.importaTemporanea(contesto, indice, uri)
+            }
+            if (nome != null) {
+                foto[indice] = nome
+                erroreFoto = null
+                withContext(Dispatchers.IO) { Foto.scartaTemporanea(contesto, precedente) }
+            } else {
+                erroreFoto = "Non sono riuscito a leggere quella foto. Riprova, o scegline un'altra."
+            }
+        }
     }
-    val contesto = LocalContext.current
-    val ambito = rememberCoroutineScope()
     var esito by remember { mutableStateOf<String?>(null) }
 
     val apriBackup = rememberLauncherForActivityResult(
@@ -147,8 +163,8 @@ fun SchermataOnboarding(
                                 )
                             }
                         ) {
-                            AvatarDaUri(
-                                origine = foto.getOrNull(indice),
+                            AvatarBambino(
+                                foto = foto.getOrNull(indice),
                                 dimensione = 46.dp,
                                 riempimento = coloreBambino(indice),
                                 tratto = InchiostroFaccina
@@ -170,7 +186,12 @@ fun SchermataOnboarding(
                                         onClickLabel = "Togli questo nome"
                                     ) {
                                         nomi.removeAt(indice)
-                                        if (indice in foto.indices) foto.removeAt(indice)
+                                        if (indice in foto.indices) {
+                                            val tolta = foto.removeAt(indice)
+                                            ambito.launch(Dispatchers.IO) {
+                                                Foto.scartaTemporanea(contesto, tolta)
+                                            }
+                                        }
                                     },
                                 contentAlignment = Alignment.Center
                             ) {
@@ -178,6 +199,11 @@ fun SchermataOnboarding(
                             }
                         }
                     }
+                }
+
+                erroreFoto?.let {
+                    Spacer(Modifier.height(10.dp))
+                    Text(it, style = MaterialTheme.typography.bodyMedium, color = InkTerziario)
                 }
 
                 if (nomi.size < 4) {

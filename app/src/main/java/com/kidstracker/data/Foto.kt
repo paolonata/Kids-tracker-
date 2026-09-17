@@ -34,17 +34,47 @@ object Foto {
      */
     fun importa(contesto: Context, bambinoId: Long, origine: Uri): String? {
         val bitmap = leggiRidotta(contesto, origine) ?: return null
+        return scriviJpeg(contesto, "bambino_${bambinoId}_${System.currentTimeMillis()}.jpg", bitmap)
+    }
+
+    /**
+     * Copia la foto scelta in un file temporaneo, per l'onboarding: le schede
+     * non hanno ancora un id quando si sceglie la foto. La Uri del selettore di
+     * sistema va letta subito, qui, e non più tardi: il permesso su quella Uri
+     * non è garantito durare fino a quando l'utente preme "Cominciamo".
+     */
+    fun importaTemporanea(contesto: Context, indice: Int, origine: Uri): String? {
+        val bitmap = leggiRidotta(contesto, origine) ?: return null
+        return scriviJpeg(contesto, "tmp_onboarding_${indice}_${System.currentTimeMillis()}.jpg", bitmap)
+    }
+
+    /**
+     * Il file temporaneo dell'onboarding diventa quello vero: un semplice
+     * spostamento sul filesystem, senza toccare più la Uri originale.
+     */
+    fun confermaTemporanea(contesto: Context, temporanea: String, bambinoId: Long): String? {
+        val origine = file(contesto, temporanea)
+        if (!origine.exists()) return null
         val nome = "bambino_${bambinoId}_${System.currentTimeMillis()}.jpg"
         return try {
-            file(contesto, nome).outputStream().use { flusso ->
-                bitmap.compress(Bitmap.CompressFormat.JPEG, QUALITA, flusso)
-            }
-            nome
+            if (origine.renameTo(file(contesto, nome))) nome else null
         } catch (errore: Exception) {
             null
-        } finally {
-            bitmap.recycle()
         }
+    }
+
+    /** Toglie il temporaneo se l'onboarding lo sostituisce o non lo usa mai. */
+    fun scartaTemporanea(contesto: Context, temporanea: String?) = elimina(contesto, temporanea)
+
+    private fun scriviJpeg(contesto: Context, nome: String, bitmap: Bitmap): String? = try {
+        file(contesto, nome).outputStream().use { flusso ->
+            bitmap.compress(Bitmap.CompressFormat.JPEG, QUALITA, flusso)
+        }
+        nome
+    } catch (errore: Exception) {
+        null
+    } finally {
+        bitmap.recycle()
     }
 
     /** Salva dei byte JPEG già pronti (serve al ripristino da backup). */
@@ -55,9 +85,6 @@ object Foto {
     } catch (errore: Exception) {
         null
     }
-
-    /** Anteprima di una foto appena scelta, prima che esista il bambino a cui darla. */
-    fun anteprima(contesto: Context, origine: Uri): Bitmap? = leggiRidotta(contesto, origine)
 
     fun carica(contesto: Context, nome: String): Bitmap? = try {
         val f = file(contesto, nome)
@@ -91,7 +118,7 @@ object Foto {
      * raddrizza secondo l'orientamento EXIF (le foto di ritratto arrivano
      * quasi sempre ruotate).
      */
-    private fun leggiRidotta(contesto: Context, origine: Uri): Bitmap? {
+    private fun leggiRidotta(contesto: Context, origine: Uri): Bitmap? = try {
         val misura = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         contesto.contentResolver.openInputStream(origine)?.use {
             BitmapFactory.decodeStream(it, null, misura)
@@ -108,7 +135,11 @@ object Foto {
 
         val gradi = orientamento(contesto, origine)
         val raddrizzata = if (gradi == 0f) grezza else ruota(grezza, gradi)
-        return riduci(raddrizzata)
+        riduci(raddrizzata)
+    } catch (errore: Exception) {
+        // Uri scaduta, permesso revocato, provider che non risponde: meglio
+        // nessuna foto che un crash silenzioso dentro una coroutine.
+        null
     }
 
     private fun campionamento(larghezza: Int, altezza: Int): Int {

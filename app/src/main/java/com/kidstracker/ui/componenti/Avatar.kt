@@ -1,7 +1,6 @@
 package com.kidstracker.ui.componenti
 
 import android.graphics.Bitmap
-import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
@@ -61,33 +60,6 @@ fun AvatarBambino(
         val caricata = withContext(Dispatchers.IO) { Foto.carica(contesto, nome) }
         if (caricata != null) memoria[nome] = caricata
         value = caricata
-    }
-
-    Ritratto(immagine, dimensione, riempimento, tratto, bordo, modifier)
-}
-
-/**
- * L'avatar di un bambino che non esiste ancora: durante l'onboarding la foto è
- * solo un [Uri] scelto dalla galleria, e il file vero si scrive più tardi,
- * quando la scheda ha un id.
- */
-@Composable
-fun AvatarDaUri(
-    origine: Uri?,
-    dimensione: Dp,
-    riempimento: Color,
-    tratto: Color,
-    modifier: Modifier = Modifier,
-    bordo: Color = Inchiostro
-) {
-    val contesto = LocalContext.current
-    val immagine by produceState<Bitmap?>(initialValue = null, origine) {
-        val scelta = origine
-        value = if (scelta == null) {
-            null
-        } else {
-            withContext(Dispatchers.IO) { Foto.anteprima(contesto, scelta) }
-        }
     }
 
     Ritratto(immagine, dimensione, riempimento, tratto, bordo, modifier)

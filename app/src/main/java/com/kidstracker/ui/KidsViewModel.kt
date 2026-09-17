@@ -172,25 +172,27 @@ class KidsViewModel(
     // ---- onboarding e impostazioni ----------------------------------------------------
 
     /**
-     * [foto] è parallela a [nomi] e può contenere dei buchi: le schede senza
-     * nome vengono scartate insieme alla loro foto, così l'accoppiamento con
-     * gli id restituiti resta corretto.
+     * [fotoTemporanee] è parallela a [nomi] e può contenere dei buchi: le
+     * schede senza nome vengono scartate insieme alla loro foto, così
+     * l'accoppiamento con gli id restituiti resta corretto. Ogni voce è già
+     * un file scritto dall'onboarding (vedi [Foto.importaTemporanea]): qui
+     * basta spostarlo sul nome definitivo, senza più toccare Uri di sistema.
      */
     fun creaBambini(
         nomi: List<String>,
-        foto: List<Uri?> = emptyList(),
+        fotoTemporanee: List<String?> = emptyList(),
         alTermine: () -> Unit = {}
     ) {
-        val schede = nomi.mapIndexed { indice, nome -> nome.trim() to foto.getOrNull(indice) }
+        val schede = nomi.mapIndexed { indice, nome -> nome.trim() to fotoTemporanee.getOrNull(indice) }
             .filter { (nome, _) -> nome.isNotEmpty() }
         if (schede.isEmpty()) return
         viewModelScope.launch {
             val id = repo.creaBambini(schede.map { it.first })
-            schede.forEachIndexed { indice, (_, origine) ->
+            schede.forEachIndexed { indice, (_, temporanea) ->
                 val bambinoId = id.getOrNull(indice) ?: return@forEachIndexed
-                if (origine == null) return@forEachIndexed
+                if (temporanea == null) return@forEachIndexed
                 val nome = withContext(Dispatchers.IO) {
-                    Foto.importa(contesto, bambinoId, origine)
+                    Foto.confermaTemporanea(contesto, temporanea, bambinoId)
                 } ?: return@forEachIndexed
                 repo.impostaFoto(bambinoId, nome)
             }
