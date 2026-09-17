@@ -36,6 +36,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.kidstracker.data.Backup
 import com.kidstracker.data.Excel
+import com.kidstracker.data.Foto
 import com.kidstracker.domain.Bambino
 import com.kidstracker.domain.Giornata
 import com.kidstracker.ui.componenti.AvatarBambino
@@ -72,7 +73,7 @@ fun SchermataImpostazioni(
     temaCorrente: TemaScelto,
     onTema: (TemaScelto) -> Unit,
     onRinomina: (Bambino, String) -> Unit,
-    onFoto: suspend (Long, Uri) -> Result<Unit>,
+    onFoto: suspend (Long, ByteArray) -> Result<Unit>,
     onRimuoviFoto: (Bambino) -> Unit,
     onPromemoria: (Boolean) -> Unit,
     onOra: (Int) -> Unit,
@@ -106,9 +107,20 @@ fun SchermataImpostazioni(
         val idAtteso = inAttesaDiFoto
         inAttesaDiFoto = null
         if (uri == null || idAtteso == null) return@rememberLauncherForActivityResult
+        // Letti qui, subito, non dentro la coroutine: il permesso di lettura
+        // sulla Uri del selettore di sistema può scadere anche solo nel
+        // tempo di un cambio di dispatcher, e su alcuni telefoni scade
+        // esattamente lì.
+        val byte = Foto.leggiByte(contesto, uri)
         ambito.launch {
             erroreFoto = try {
-                onFoto(idAtteso, uri).fold(
+                val dati = byte.getOrNull()
+                val risultato = if (dati != null) {
+                    onFoto(idAtteso, dati)
+                } else {
+                    Result.failure(byte.exceptionOrNull() ?: IllegalStateException("foto illeggibile"))
+                }
+                risultato.fold(
                     onSuccess = { null },
                     onFailure = { errore ->
                         "Non sono riuscito a leggere quella foto: " +

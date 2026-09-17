@@ -1,7 +1,6 @@
 package com.kidstracker.ui
 
 import android.content.Context
-import android.net.Uri
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -231,6 +230,10 @@ class KidsViewModel(
     /**
      * Importa la foto scelta dalla galleria per il bambino con questo id.
      *
+     * Prende i byte già letti, non una Uri: leggerli richiede di chiamare
+     * [Foto.leggiByte] appena la Uri arriva dal selettore, prima ancora di
+     * entrare in questa funzione — vedi il suo commento sul perché.
+     *
      * Prende l'id, non l'oggetto [Bambino]: il selettore di sistema può far
      * ricreare l'app (la chiude per liberare memoria mentre è aperto), e nel
      * primo istante dopo la ricreazione la lista in [bambini] può ancora
@@ -240,14 +243,14 @@ class KidsViewModel(
      * in silenzio proprio in quella finestra.
      *
      * Restituisce un [Result]: la schermata può così mostrare il motivo vero
-     * di un fallimento (Uri scaduta, formato non decodificabile, storage
-     * piena...) invece di un "non ci sono riuscito" che non dice nulla.
+     * di un fallimento (formato non decodificabile, storage piena...)
+     * invece di un "non ci sono riuscito" che non dice nulla.
      */
-    suspend fun scegliFoto(bambinoId: Long, origine: Uri): Result<Unit> {
+    suspend fun scegliFoto(bambinoId: Long, byte: ByteArray): Result<Unit> {
         val bambino = repo.bambini.first().firstOrNull { it.id == bambinoId }
             ?: return Result.failure(IllegalStateException("Bambino non trovato (id=$bambinoId)"))
         val nuova = withContext(Dispatchers.IO) {
-            Foto.importa(contesto, bambino.id, origine)
+            Foto.importa(contesto, bambino.id, byte)
         }.getOrElse { return Result.failure(it) }
         repo.impostaFoto(bambino.id, nuova)
         withContext(Dispatchers.IO) { Foto.elimina(contesto, bambino.foto) }

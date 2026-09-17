@@ -7,6 +7,7 @@ import android.graphics.Matrix
 import android.media.ExifInterface
 import android.net.Uri
 import android.util.Base64
+import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.IOException
 
@@ -18,11 +19,11 @@ import java.io.IOException
  * Il nome porta dentro l'orario di importazione, così quando si cambia foto
  * cambia anche il nome e nessuna cache mostra ancora quella vecchia.
  *
- * importa/importaTemporanea restituiscono un [Result] e non un semplice
- * null in caso di fallimento: un null da solo non dice se il problema è la
- * Uri scaduta, un formato non decodificabile o lo storage piena, e senza
- * quel dettaglio un fallimento sul telefono di qualcun altro è impossibile
- * da diagnosticare da qui.
+ * importa/importaTemporanea prendono i byte già letti, non una Uri: su
+ * alcuni telefoni il permesso di lettura che il selettore di sistema dà su
+ * quella Uri scade anche solo nel tempo di passare da un dispatcher a un
+ * altro. leggiByte va chiamata subito, appena la Uri arriva, prima di
+ * qualsiasi lavoro differito in una coroutine — vedi il suo commento.
  */
 object Foto {
 
@@ -35,20 +36,42 @@ object Foto {
 
     fun file(contesto: Context, nome: String): File = File(cartella(contesto), nome)
 
+    /**
+     * Legge subito, sul posto, i byte della foto scelta dal selettore di
+     * sistema. Va chiamata appena si riceve la Uri, prima di lanciare
+     * qualunque coroutine: il permesso di lettura che il selettore concede
+     * su quella Uri non è garantito sopravvivere nemmeno a un solo cambio
+     * di dispatcher, e su alcuni telefoni scade proprio in quel momento
+     * (openInputStream torna null, non un'eccezione). Una volta che i byte
+     * sono in mano, la Uri originale non serve più: tutto il resto del
+     * lavoro (decodifica, ridimensionamento, scrittura) può avvenire con
+     * comodo su un altro thread.
+     */
+    fun leggiByte(contesto: Context, origine: Uri): Result<ByteArray> = try {
+        val byte = contesto.contentResolver.openInputStream(origine)?.use { it.readBytes() }
+        if (byte != null) {
+            Result.success(byte)
+        } else {
+            Result.failure(
+                IOException("Il sistema non mi lascia aprire questa foto (openInputStream nullo)")
+            )
+        }
+    } catch (errore: Exception) {
+        Result.failure(errore)
+    }
+
     /** Copia la foto scelta dentro l'app e restituisce il nome del file. */
-    fun importa(contesto: Context, bambinoId: Long, origine: Uri): Result<String> {
-        val bitmap = leggiRidotta(contesto, origine).getOrElse { return Result.failure(it) }
+    fun importa(contesto: Context, bambinoId: Long, byte: ByteArray): Result<String> {
+        val bitmap = decodificaRidotta(byte).getOrElse { return Result.failure(it) }
         return scriviJpeg(contesto, "bambino_${bambinoId}_${System.currentTimeMillis()}.jpg", bitmap)
     }
 
     /**
      * Copia la foto scelta in un file temporaneo, per l'onboarding: le schede
-     * non hanno ancora un id quando si sceglie la foto. La Uri del selettore di
-     * sistema va letta subito, qui, e non più tardi: il permesso su quella Uri
-     * non è garantito durare fino a quando l'utente preme "Cominciamo".
+     * non hanno ancora un id quando si sceglie la foto.
      */
-    fun importaTemporanea(contesto: Context, indice: Int, origine: Uri): Result<String> {
-        val bitmap = leggiRidotta(contesto, origine).getOrElse { return Result.failure(it) }
+    fun importaTemporanea(contesto: Context, indice: Int, byte: ByteArray): Result<String> {
+        val bitmap = decodificaRidotta(byte).getOrElse { return Result.failure(it) }
         return scriviJpeg(contesto, "tmp_onboarding_${indice}_${System.currentTimeMillis()}.jpg", bitmap)
     }
 
@@ -126,19 +149,16 @@ object Foto {
     }
 
     /**
-     * Decodifica l'immagine scelta scalandola durante la lettura, così una foto
-     * da 12 megapixel non viene mai caricata per intero in memoria, e la
+     * Decodifica l'immagine già letta scalandola, così una foto da 12
+     * megapixel non viene mai caricata per intero in memoria, e la
      * raddrizza secondo l'orientamento EXIF (le foto di ritratto arrivano
-     * quasi sempre ruotate).
+     * quasi sempre ruotate). Lavora sui byte, non su una Uri: a questo
+     * punto la foto è già al sicuro dentro il processo.
      */
-    private fun leggiRidotta(contesto: Context, origine: Uri): Result<Bitmap> {
+    private fun decodificaRidotta(byte: ByteArray): Result<Bitmap> {
         return try {
             val misura = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-            contesto.contentResolver.openInputStream(origine)?.use {
-                BitmapFactory.decodeStream(it, null, misura)
-            } ?: return Result.failure(
-                IOException("Il sistema non mi lascia aprire questa foto (openInputStream nullo)")
-            )
+            BitmapFactory.decodeByteArray(byte, 0, byte.size, misura)
 
             if (misura.outWidth <= 0 || misura.outHeight <= 0) {
                 return Result.failure(
@@ -149,18 +169,13 @@ object Foto {
             val opzioni = BitmapFactory.Options().apply {
                 inSampleSize = campionamento(misura.outWidth, misura.outHeight)
             }
-            val grezza = contesto.contentResolver.openInputStream(origine)?.use {
-                BitmapFactory.decodeStream(it, null, opzioni)
-            } ?: return Result.failure(
-                IOException("Riletta la foto una seconda volta, ma la decodifica ha dato un'immagine nulla")
-            )
+            val grezza = BitmapFactory.decodeByteArray(byte, 0, byte.size, opzioni)
+                ?: return Result.failure(IOException("BitmapFactory non è riuscito a decodificare l'immagine"))
 
-            val gradi = orientamento(contesto, origine)
+            val gradi = orientamento(byte)
             val raddrizzata = if (gradi == 0f) grezza else ruota(grezza, gradi)
             Result.success(riduci(raddrizzata))
         } catch (errore: Exception) {
-            // Uri scaduta, permesso revocato, provider che non risponde: qui
-            // arriva l'eccezione vera, non più schiacciata a un null generico.
             Result.failure(errore)
         }
     }
@@ -175,8 +190,8 @@ object Foto {
         return passo
     }
 
-    private fun orientamento(contesto: Context, origine: Uri): Float = runCatching {
-        contesto.contentResolver.openInputStream(origine)?.use { flusso ->
+    private fun orientamento(byte: ByteArray): Float = runCatching {
+        ByteArrayInputStream(byte).use { flusso ->
             when (
                 ExifInterface(flusso).getAttributeInt(
                     ExifInterface.TAG_ORIENTATION,
@@ -188,7 +203,7 @@ object Foto {
                 ExifInterface.ORIENTATION_ROTATE_270 -> 270f
                 else -> 0f
             }
-        } ?: 0f
+        }
     }.getOrDefault(0f)
 
     private fun ruota(bitmap: Bitmap, gradi: Float): Bitmap {

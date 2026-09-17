@@ -90,6 +90,11 @@ fun SchermataOnboarding(
         val indice = inAttesaDiFoto
         inAttesaDiFoto = null
         if (uri == null || indice == null) return@rememberLauncherForActivityResult
+        // Letti qui, subito, non dentro la coroutine: il permesso di lettura
+        // sulla Uri del selettore di sistema può scadere anche solo nel
+        // tempo di un cambio di dispatcher, e su alcuni telefoni scade
+        // esattamente lì.
+        val byte = Foto.leggiByte(contesto, uri)
         ambito.launch {
             erroreFoto = try {
                 if (indice !in foto.indices) {
@@ -98,9 +103,13 @@ fun SchermataOnboarding(
                     "Non sono riuscito ad associare la foto a una scheda. Riprova."
                 } else {
                     val precedente = foto[indice]
-                    withContext(Dispatchers.IO) {
-                        Foto.importaTemporanea(contesto, indice, uri)
-                    }.fold(
+                    val dati = byte.getOrNull()
+                    val importata = if (dati != null) {
+                        withContext(Dispatchers.IO) { Foto.importaTemporanea(contesto, indice, dati) }
+                    } else {
+                        Result.failure(byte.exceptionOrNull() ?: IllegalStateException("foto illeggibile"))
+                    }
+                    importata.fold(
                         onSuccess = { nome ->
                             foto[indice] = nome
                             ambito.launch(Dispatchers.IO) { Foto.scartaTemporanea(contesto, precedente) }
