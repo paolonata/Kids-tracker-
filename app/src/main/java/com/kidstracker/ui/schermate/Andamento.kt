@@ -1,12 +1,12 @@
 package com.kidstracker.ui.schermate
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -25,6 +25,7 @@ import com.kidstracker.ui.Formati
 import com.kidstracker.ui.Periodo
 import com.kidstracker.ui.componenti.BarraGiorno
 import com.kidstracker.ui.componenti.BottoneContornato
+import com.kidstracker.ui.componenti.IconaFreccia
 import com.kidstracker.ui.componenti.IconaImpostazioni
 import com.kidstracker.ui.componenti.BarreGiorni
 import com.kidstracker.ui.componenti.EtichettaDelta
@@ -43,21 +44,36 @@ import com.kidstracker.ui.tema.Menta
 import com.kidstracker.ui.tema.coloreBambino
 import java.time.DayOfWeek
 import java.time.LocalDate
+import java.time.YearMonth
 
 @Composable
 fun SchermataAndamento(
     periodo: Periodo,
+    meseAndamento: YearMonth?,
     bambini: List<Bambino>,
     bambinoCorrente: Bambino?,
     storico: List<Giornata>,
     onSeleziona: (Long) -> Unit,
     onPeriodo: (Periodo) -> Unit,
+    onMostraMese: () -> Unit,
+    onMeseIndietro: () -> Unit,
+    onMeseAvanti: () -> Unit,
     onImpostazioni: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val bambino = bambinoCorrente ?: return
-    val fine = LocalDate.now()
-    val inizio = fine.minusDays((periodo.giorni - 1).toLong())
+
+    // Due modi di scegliere la finestra da guardare: un numero di giorni
+    // all'indietro da oggi, oppure un mese intero di calendario.
+    val fine: LocalDate
+    val inizio: LocalDate
+    if (meseAndamento != null) {
+        fine = minOf(meseAndamento.atEndOfMonth(), LocalDate.now())
+        inizio = meseAndamento.atDay(1)
+    } else {
+        fine = LocalDate.now()
+        inizio = fine.minusDays((periodo.giorni - 1).toLong())
+    }
 
     val serie = bambini.map { b ->
         val sue = storico.filter { it.bambinoId == b.id }
@@ -73,13 +89,22 @@ fun SchermataAndamento(
         .toList()
 
     val sueGiornate = storico.filter { it.bambinoId == bambino.id }
-    val colore = coloreBambino(bambino.coloreIndex)
 
     Column(modifier = modifier) {
         IntestazionePrugna(
-            titolo = "Andamento",
-            sottotitolo = "come stanno cambiando le cose",
+            titolo = meseAndamento?.let { Formati.mese(it.year, it.monthValue) } ?: "Andamento",
+            sottotitolo = meseAndamento?.let { "${it.year}" } ?: "come stanno cambiando le cose",
             azioni = {
+                if (meseAndamento != null) {
+                    BottoneContornato(onMeseIndietro, "Mese precedente") { tinta ->
+                        IconaFreccia(tinta)
+                    }
+                    BottoneContornato(
+                        onClick = onMeseAvanti,
+                        descrizione = "Mese successivo",
+                        attivo = meseAndamento.isBefore(YearMonth.now())
+                    ) { tinta -> IconaFreccia(tinta, versoDestra = true) }
+                }
                 BottoneContornato(onImpostazioni, "Apri le impostazioni") { tinta ->
                     IconaImpostazioni(tinta)
                 }
@@ -93,16 +118,35 @@ fun SchermataAndamento(
                 .padding(start = 20.dp, end = 20.dp, top = 16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Periodo.entries.forEach { scelta ->
+            if (meseAndamento == null) {
+                // Sono sei pillole: su un telefono stretto non ci stanno tutte
+                // fianco a fianco, quindi la riga scorre invece di schiacciarle.
+                Row(
+                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Periodo.entries.forEach { scelta ->
+                        PillolaScelta(
+                            testo = scelta.etichetta,
+                            selezionata = scelta == periodo,
+                            onClick = { onPeriodo(scelta) },
+                            coloreSelezione = Giallo
+                        )
+                    }
                     PillolaScelta(
-                        testo = scelta.etichetta,
-                        selezionata = scelta == periodo,
-                        onClick = { onPeriodo(scelta) },
-                        modifier = Modifier.weight(1f),
+                        testo = "Un mese",
+                        selezionata = false,
+                        onClick = onMostraMese,
                         coloreSelezione = Giallo
                     )
                 }
+            } else {
+                PillolaScelta(
+                    testo = "Torna agli ultimi giorni",
+                    selezionata = false,
+                    onClick = { onPeriodo(periodo) },
+                    coloreSelezione = Giallo
+                )
             }
 
             SchedaConTestata(
@@ -134,9 +178,9 @@ fun SchermataAndamento(
                 }
             ) {
                 Categoria.tutte.forEach { categoria ->
-                    val variazione = Statistiche.variazioneCategoria(sueGiornate, categoria, fine)
-                    val ultimi = generateSequence(fine.minusDays(13)) { it.plusDays(1) }
-                        .takeWhile { !it.isAfter(fine) }
+                    val variazione = Statistiche.variazioneCategoria(sueGiornate, categoria, LocalDate.now())
+                    val ultimi = generateSequence(LocalDate.now().minusDays(13)) { it.plusDays(1) }
+                        .takeWhile { !it.isAfter(LocalDate.now()) }
                         .map { giorno ->
                             sueGiornate.firstOrNull { it.data == giorno }
                                 ?.voti?.get(categoria)
@@ -158,7 +202,6 @@ fun SchermataAndamento(
                         )
                         MiniBarre(
                             valori = ultimi,
-                            colore = colore,
                             modifier = Modifier.weight(1f)
                         )
                         EtichettaDelta(variazione.delta, modifier = Modifier.width(62.dp))
@@ -179,7 +222,7 @@ fun SchermataAndamento(
                             BarraGiorno(Formati.giornoSettimanaCorto(giorno), it)
                         }
                     }
-                BarreGiorni(barre = barre, colore = colore)
+                BarreGiorni(barre = barre)
                 Spacer(Modifier.height(8.dp))
                 Text(
                     frasePerGiorno(barre, bambino.nome),

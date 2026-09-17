@@ -67,10 +67,19 @@ object Foto {
     fun scartaTemporanea(contesto: Context, temporanea: String?) = elimina(contesto, temporanea)
 
     private fun scriviJpeg(contesto: Context, nome: String, bitmap: Bitmap): String? = try {
-        file(contesto, nome).outputStream().use { flusso ->
+        val destinazione = file(contesto, nome)
+        destinazione.outputStream().use { flusso ->
             bitmap.compress(Bitmap.CompressFormat.JPEG, QUALITA, flusso)
         }
-        nome
+        // Uno storage pieno o un I/O interrotto può lasciare un file da 0 byte
+        // senza sollevare un'eccezione: qui lo trattiamo come un fallimento,
+        // non come una foto che poi risulta semplicemente illeggibile.
+        if (destinazione.length() > 0) {
+            nome
+        } else {
+            destinazione.delete()
+            null
+        }
     } catch (errore: Exception) {
         null
     } finally {

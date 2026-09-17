@@ -40,7 +40,9 @@ import java.time.YearMonth
 enum class Periodo(val giorni: Int, val etichetta: String) {
     SETTIMANA(7, "7 giorni"),
     DUE_SETTIMANE(14, "14 giorni"),
-    MESE(30, "30 giorni")
+    MESE(30, "30 giorni"),
+    DUE_MESI(60, "60 giorni"),
+    TRE_MESI(90, "90 giorni")
 }
 
 /** Stato iniziale: serve l'onboarding o si può entrare? */
@@ -75,11 +77,16 @@ class KidsViewModel(
     private val _data = MutableStateFlow(LocalDate.now())
     private val _mese = MutableStateFlow(YearMonth.now())
     private val _periodo = MutableStateFlow(Periodo.DUE_SETTIMANE)
+    // null = si guarda un numero di giorni all'indietro (_periodo). Un mese
+    // scelto qui prende il sopravvento: sono due modi diversi di guardare
+    // lo stesso Andamento, non due schermate.
+    private val _meseAndamento = MutableStateFlow<YearMonth?>(null)
     private val _statoAvvio = MutableStateFlow<StatoAvvio>(StatoAvvio.Caricamento)
 
     val data: StateFlow<LocalDate> = _data.asStateFlow()
     val mese: StateFlow<YearMonth> = _mese.asStateFlow()
     val periodo: StateFlow<Periodo> = _periodo.asStateFlow()
+    val meseAndamento: StateFlow<YearMonth?> = _meseAndamento.asStateFlow()
     val statoAvvio: StateFlow<StatoAvvio> = _statoAvvio.asStateFlow()
 
     /** Se non è stato scelto nessuno, vale il primo della lista. */
@@ -134,6 +141,21 @@ class KidsViewModel(
 
     fun impostaPeriodo(nuovo: Periodo) {
         _periodo.value = nuovo
+        _meseAndamento.value = null
+    }
+
+    /** Passa alla vista per mese in Andamento, di norma su quello corrente. */
+    fun mostraMeseAndamento() {
+        _meseAndamento.value = _meseAndamento.value ?: YearMonth.now()
+    }
+
+    fun meseAndamentoIndietro() {
+        _meseAndamento.value = (_meseAndamento.value ?: YearMonth.now()).minusMonths(1)
+    }
+
+    fun meseAndamentoAvanti() {
+        val corrente = _meseAndamento.value ?: return
+        if (corrente.isBefore(YearMonth.now())) _meseAndamento.value = corrente.plusMonths(1)
     }
 
     // ---- modifiche: si salva a ogni tocco, senza bottone salva ------------------------
@@ -209,15 +231,16 @@ class KidsViewModel(
     /**
      * Importa la foto scelta dalla galleria. La vecchia si cancella solo dopo
      * che la nuova è stata scritta, così un errore non lascia il bambino senza.
+     * Restituisce se è andata bene, così la schermata può dirlo se non ci
+     * riesce invece di lasciare tutto in silenzio.
      */
-    fun scegliFoto(bambino: Bambino, origine: Uri) {
-        viewModelScope.launch {
-            val nuova = withContext(Dispatchers.IO) {
-                Foto.importa(contesto, bambino.id, origine)
-            } ?: return@launch
-            repo.impostaFoto(bambino.id, nuova)
-            withContext(Dispatchers.IO) { Foto.elimina(contesto, bambino.foto) }
-        }
+    suspend fun scegliFoto(bambino: Bambino, origine: Uri): Boolean {
+        val nuova = withContext(Dispatchers.IO) {
+            Foto.importa(contesto, bambino.id, origine)
+        } ?: return false
+        repo.impostaFoto(bambino.id, nuova)
+        withContext(Dispatchers.IO) { Foto.elimina(contesto, bambino.foto) }
+        return true
     }
 
     fun rimuoviFoto(bambino: Bambino) {

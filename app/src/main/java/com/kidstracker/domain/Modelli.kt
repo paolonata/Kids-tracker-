@@ -38,7 +38,9 @@ enum class Categoria(val etichetta: String) {
 
     companion object {
         val pasti: List<Categoria> = listOf(PRIMO, SECONDO, DOLCE)
-        val nannaEPappa: List<Categoria> = listOf(NANNA, PRIMO, SECONDO, DOLCE)
+        // L'ordine qui è quello con cui compare la carta "Pappa e nanna" in
+        // Oggi: prima la pappa, poi la nanna.
+        val nannaEPappa: List<Categoria> = listOf(PRIMO, SECONDO, DOLCE, NANNA)
         val porta: List<Categoria> = listOf(ENTRATA, USCITA)
         val tutte: List<Categoria> = listOf(NANNA, PRIMO, SECONDO, DOLCE, ENTRATA, USCITA)
 

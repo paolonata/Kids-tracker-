@@ -8,7 +8,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -328,10 +330,21 @@ private fun RiepilogoMese(tutte: List<Giornata>) {
         }
     val striscia = Statistiche.strisciaCorrente(giornate)
 
-    Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-        Riquadro("$buone", "giornate buone su $segnate", Menta, Modifier.weight(1f))
-        Riquadro(Statistiche.percentuale(pappa), "indice pappa del mese", Azzurrino, Modifier.weight(1f))
-        Riquadro("$striscia", "giorni buoni di fila", Rosa, Modifier.weight(1f))
+    // IntrinsicSize.Max sulla riga: senza, ogni riquadro prende solo l'altezza
+    // della propria etichetta, e "indice pappa del mese" va a capo diversamente
+    // dagli altri due, lasciandoli disallineati in altezza.
+    Row(
+        modifier = Modifier.height(IntrinsicSize.Max),
+        horizontalArrangement = Arrangement.spacedBy(9.dp)
+    ) {
+        Riquadro("$buone", "giornate buone su $segnate", Menta, Modifier.weight(1f).fillMaxHeight())
+        Riquadro(
+            Statistiche.percentuale(pappa),
+            "indice pappa del mese",
+            Azzurrino,
+            Modifier.weight(1f).fillMaxHeight()
+        )
+        Riquadro("$striscia", "giorni buoni di fila", Rosa, Modifier.weight(1f).fillMaxHeight())
     }
 }
 
@@ -345,7 +358,8 @@ private fun Riquadro(
     Column(
         modifier = modifier
             .sticker(tinta, 19.dp)
-            .padding(horizontal = 11.dp, vertical = 13.dp)
+            .padding(horizontal = 11.dp, vertical = 13.dp),
+        verticalArrangement = Arrangement.Top
     ) {
         Text(valore, style = MaterialTheme.typography.displaySmall)
         Spacer(Modifier.height(6.dp))

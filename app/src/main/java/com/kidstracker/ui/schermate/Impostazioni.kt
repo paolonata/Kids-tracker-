@@ -71,7 +71,7 @@ fun SchermataImpostazioni(
     temaCorrente: TemaScelto,
     onTema: (TemaScelto) -> Unit,
     onRinomina: (Bambino, String) -> Unit,
-    onFoto: (Bambino, Uri) -> Unit,
+    onFoto: suspend (Bambino, Uri) -> Boolean,
     onRimuoviFoto: (Bambino) -> Unit,
     onPromemoria: (Boolean) -> Unit,
     onOra: (Int) -> Unit,
@@ -85,6 +85,7 @@ fun SchermataImpostazioni(
     val contesto = LocalContext.current
     val ambito = rememberCoroutineScope()
     var messaggio by remember { mutableStateOf<String?>(null) }
+    var erroreFoto by remember { mutableStateOf<String?>(null) }
     var chiedeConferma by remember { mutableStateOf(false) }
 
     // Un solo selettore di foto per tutti i bambini: si ricorda chi l'ha aperto.
@@ -94,7 +95,15 @@ fun SchermataImpostazioni(
     ) { uri: Uri? ->
         val bambino = bambini.firstOrNull { it.id == inAttesaDiFoto }
         inAttesaDiFoto = null
-        if (uri != null && bambino != null) onFoto(bambino, uri)
+        if (uri == null || bambino == null) return@rememberLauncherForActivityResult
+        ambito.launch {
+            val riuscita = onFoto(bambino, uri)
+            erroreFoto = if (riuscita) {
+                null
+            } else {
+                "Non sono riuscito a leggere quella foto. Riprova, o scegline un'altra."
+            }
+        }
     }
 
     val salvaJson = rememberLauncherForActivityResult(
@@ -243,6 +252,11 @@ fun SchermataImpostazioni(
                             )
                         }
                     }
+                }
+
+                erroreFoto?.let {
+                    Spacer(Modifier.height(10.dp))
+                    Text(it, style = MaterialTheme.typography.bodyMedium, color = InkTerziario)
                 }
             }
 

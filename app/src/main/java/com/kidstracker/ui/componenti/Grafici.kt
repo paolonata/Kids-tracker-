@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kidstracker.ui.tema.Crema
 import com.kidstracker.ui.tema.Figtree
+import com.kidstracker.ui.tema.Giallo
 import com.kidstracker.ui.tema.Griglia
 import com.kidstracker.ui.tema.Inchiostro
 import com.kidstracker.ui.tema.InkSecondario
@@ -48,6 +49,7 @@ import com.kidstracker.ui.tema.Misure
 import com.kidstracker.ui.tema.Rosso
 import com.kidstracker.ui.tema.RossoScuro
 import com.kidstracker.ui.tema.SabbiaTenue
+import com.kidstracker.ui.tema.Verde
 import com.kidstracker.ui.tema.VerdeScuro
 import kotlin.math.roundToInt
 
@@ -245,14 +247,21 @@ private fun PallinoEtichetta(colore: Color, testo: String) {
     }
 }
 
-/** Serie minuscola per una sola categoria: barre piene, una per giorno. */
+/**
+ * Serie minuscola per una sola categoria: barre piene, una per giorno.
+ * Colorate sull'esito del giorno (verde/giallo/rosso), non su un colore
+ * fisso: così si legge "bene o male" dal colore, senza dover confrontare
+ * l'altezza delle barre fra loro.
+ */
 @Composable
 fun MiniBarre(
     valori: List<Double?>,
-    colore: Color,
     modifier: Modifier = Modifier
 ) {
     val cGriglia = Griglia
+    val cVerde = Verde
+    val cGiallo = Giallo
+    val cRosso = Rosso
     Canvas(modifier = modifier.height(34.dp)) {
         val base = size.height - 2f
         drawLine(cGriglia, Offset(0f, base), Offset(size.width, base), strokeWidth = 1.5f)
@@ -262,6 +271,11 @@ fun MiniBarre(
         valori.forEachIndexed { indice, valore ->
             if (valore == null) return@forEachIndexed
             val altezza = ((valore / 100.0).toFloat() * (base - 2f)).coerceAtLeast(2f)
+            val colore = when {
+                valore >= 75.0 -> cVerde
+                valore >= 25.0 -> cGiallo
+                else -> cRosso
+            }
             drawRoundRect(
                 color = colore,
                 topLeft = Offset(indice * passo, base - altezza),
@@ -275,15 +289,15 @@ fun MiniBarre(
 data class BarraGiorno(val etichetta: String, val valore: Double)
 
 /**
- * Barre bordate di nero, una per giorno di scuola. Sono etichettate solo
- * la più bassa e la più alta: il resto si legge dalla forma.
+ * Barre bordate di nero, una per giorno di scuola. Colorate sulla stessa
+ * soglia del giudizio (verde/giallo/rosso): il colore dice subito se un
+ * giorno è andato bene, senza dover confrontare l'altezza fra le barre.
+ * Sono etichettate solo la più bassa e la più alta.
  */
 @Composable
 fun BarreGiorni(
     barre: List<BarraGiorno>,
-    colore: Color,
-    modifier: Modifier = Modifier,
-    coloreMinimo: Color = Rosso
+    modifier: Modifier = Modifier
 ) {
     if (barre.isEmpty()) {
         Text(
@@ -305,6 +319,9 @@ fun BarreGiorni(
     )
     val cAsse = SabbiaTenue
     val cInk = Inchiostro
+    val cVerde = Verde
+    val cGiallo = Giallo
+    val cRosso = Rosso
 
     Column(modifier = modifier.fillMaxWidth()) {
         Canvas(
@@ -321,8 +338,13 @@ fun BarreGiorni(
                 val altezza = ((barra.valore / 100.0).toFloat() * (base - alto)).coerceAtLeast(3f)
                 val x = indice * passo + (passo - larghezza) / 2f
                 val y = base - altezza
+                val colore = when {
+                    barra.valore >= 67.0 -> cVerde
+                    barra.valore >= 34.0 -> cGiallo
+                    else -> cRosso
+                }
                 drawRoundRect(
-                    color = if (barra.valore == minimo && barre.size > 1) coloreMinimo else colore,
+                    color = colore,
                     topLeft = Offset(x, y),
                     size = Size(larghezza, altezza),
                     cornerRadius = CornerRadius(7.dp.toPx(), 7.dp.toPx())

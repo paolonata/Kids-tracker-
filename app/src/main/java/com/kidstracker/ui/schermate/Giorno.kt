@@ -7,10 +7,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
@@ -19,10 +22,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusEvent
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
@@ -60,6 +66,7 @@ import com.kidstracker.ui.tema.Rosa
 import com.kidstracker.ui.tema.coloreBambino
 import com.kidstracker.ui.tema.coloreGiudizio
 import com.kidstracker.ui.tema.inchiostroSuGiudizio
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 
 /**
@@ -108,6 +115,10 @@ fun SchermataGiorno(
             modifier = Modifier
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
+                // Con la finestra a edge-to-edge il sistema non ridimensiona
+                // più la finestra da solo alla comparsa della tastiera:
+                // senza questo, il campo nota resta coperto sotto di lei.
+                .imePadding()
                 .padding(start = 20.dp, end = 20.dp, top = 16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
@@ -202,7 +213,7 @@ fun SchermataGiorno(
                 }
             } else {
                 SchedaSticker(sfondo = Azzurrino) {
-                    Text("Nanna e pappa", style = MaterialTheme.typography.headlineSmall)
+                    Text("Pappa e nanna", style = MaterialTheme.typography.headlineSmall)
                     Spacer(Modifier.height(9.dp))
                     IntestazioneColonne()
                     Categoria.nannaEPappa.forEach { categoria ->
@@ -306,12 +317,19 @@ private fun CampoNota(
     var scritto by rememberSaveable(chiave) { mutableStateOf<String?>(null) }
     val valore = scritto ?: valoreSalvato
 
+    // imePadding() da solo fa spazio alla tastiera, ma non scorre fin qui:
+    // se il campo è già oltre il bordo basso quando la tastiera si apre,
+    // senza questo resterebbe comunque fuori vista finché non si scorre a mano.
+    val richiestaVista = remember { BringIntoViewRequester() }
+    val ambito = rememberCoroutineScope()
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 48.dp)
             .sticker(Crema, 15.dp, ombra = false)
-            .padding(horizontal = 14.dp, vertical = 12.dp),
+            .padding(horizontal = 14.dp, vertical = 12.dp)
+            .bringIntoViewRequester(richiestaVista),
         contentAlignment = Alignment.CenterStart
     ) {
         if (valore.isEmpty()) {
@@ -329,7 +347,11 @@ private fun CampoNota(
             },
             textStyle = MaterialTheme.typography.bodyLarge.merge(TextStyle(color = Inchiostro)),
             cursorBrush = SolidColor(Inchiostro),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .onFocusEvent {
+                    if (it.isFocused) ambito.launch { richiestaVista.bringIntoView() }
+                }
         )
     }
 }

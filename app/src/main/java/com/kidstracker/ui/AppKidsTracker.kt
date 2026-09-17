@@ -78,6 +78,7 @@ private fun ContenutoPrincipale(vm: KidsViewModel) {
     val data by vm.data.collectAsStateWithLifecycle()
     val mese by vm.mese.collectAsStateWithLifecycle()
     val periodo by vm.periodo.collectAsStateWithLifecycle()
+    val meseAndamento by vm.meseAndamento.collectAsStateWithLifecycle()
     val giornateDelGiorno by vm.giornateDelGiorno.collectAsStateWithLifecycle()
     val giornateDelMese by vm.giornateDelMese.collectAsStateWithLifecycle()
     val storico by vm.storico.collectAsStateWithLifecycle()
@@ -151,11 +152,15 @@ private fun ContenutoPrincipale(vm: KidsViewModel) {
             composable(Sezione.ANDAMENTO.rotta) {
                 SchermataAndamento(
                     periodo = periodo,
+                    meseAndamento = meseAndamento,
                     bambini = bambini,
                     bambinoCorrente = bambinoCorrente,
                     storico = storico,
                     onSeleziona = vm::seleziona,
                     onPeriodo = vm::impostaPeriodo,
+                    onMostraMese = vm::mostraMeseAndamento,
+                    onMeseIndietro = vm::meseAndamentoIndietro,
+                    onMeseAvanti = vm::meseAndamentoAvanti,
                     onImpostazioni = { nav.navigate(ROTTA_IMPOSTAZIONI) },
                     modifier = Modifier.fillMaxSize()
                 )
