@@ -79,8 +79,8 @@ fun SchermataScoperte(
             modifier = Modifier
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
-                .padding(start = 20.dp, end = 20.dp, top = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+                .padding(start = 14.dp, end = 14.dp, top = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(9.dp)
         ) {
             if (sue.size < 5) {
                 SchedaSticker(sfondo = Azzurrino) {

@@ -138,6 +138,7 @@ private fun ContenutoPrincipale(vm: KidsViewModel) {
                     bambini = bambini,
                     bambinoCorrente = bambinoCorrente,
                     giornate = giornateDelMese,
+                    giornateOggi = giornateDelGiorno,
                     onSeleziona = vm::seleziona,
                     onMeseIndietro = vm::meseIndietro,
                     onMeseAvanti = vm::meseAvanti,

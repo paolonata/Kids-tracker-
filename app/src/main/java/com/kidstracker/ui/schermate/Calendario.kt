@@ -38,7 +38,7 @@ import com.kidstracker.ui.componenti.BottoneContornato
 import com.kidstracker.ui.componenti.Faccina
 import com.kidstracker.ui.componenti.IconaFreccia
 import com.kidstracker.ui.componenti.IntestazionePrugna
-import com.kidstracker.ui.componenti.SelettoreBambino
+import com.kidstracker.ui.componenti.LinguetteBambino
 import com.kidstracker.ui.componenti.bordoTratteggiato
 import com.kidstracker.ui.componenti.sticker
 import com.kidstracker.ui.tema.Azzurrino
@@ -63,6 +63,7 @@ fun SchermataCalendario(
     bambini: List<Bambino>,
     bambinoCorrente: Bambino?,
     giornate: List<Giornata>,
+    giornateOggi: List<Giornata>,
     onSeleziona: (Long) -> Unit,
     onMeseIndietro: () -> Unit,
     onMeseAvanti: () -> Unit,
@@ -88,6 +89,14 @@ fun SchermataCalendario(
                     descrizione = "Mese successivo",
                     attivo = mese.isBefore(YearMonth.now())
                 ) { tinta -> IconaFreccia(tinta, versoDestra = true) }
+            },
+            linguette = {
+                LinguetteBambino(
+                    bambini = bambini,
+                    selezionatoId = bambino.id,
+                    onSeleziona = onSeleziona,
+                    stato = { altro -> Formati.statoGiornata(giornateOggi.firstOrNull { it.bambinoId == altro.id }) }
+                )
             }
         )
 
@@ -95,15 +104,9 @@ fun SchermataCalendario(
             modifier = Modifier
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
-                .padding(start = 20.dp, end = 20.dp, top = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+                .padding(start = 14.dp, end = 14.dp, top = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(9.dp)
         ) {
-            SelettoreBambino(
-                bambini = bambini,
-                selezionatoId = bambino.id,
-                onSeleziona = onSeleziona
-            )
-
             GrigliaMese(
                 mese = mese,
                 perGiorno = perGiorno,
