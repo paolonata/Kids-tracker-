@@ -56,8 +56,9 @@ fun SchermataScoperte(
     modifier: Modifier = Modifier
 ) {
     val bambino = bambinoCorrente ?: return
-    val sue = storico.filter { it.bambinoId == bambino.id && !it.vuota }
-    val segnate = storico.count { !it.vuota }
+    // Le scoperte nascono dai confronti: i festivi non hanno niente da confrontare.
+    val sue = storico.filter { it.bambinoId == bambino.id && it.contaNelleAnalisi }
+    val segnate = storico.count { it.contaNelleAnalisi }
 
     Column(modifier = modifier) {
         IntestazionePrugna(

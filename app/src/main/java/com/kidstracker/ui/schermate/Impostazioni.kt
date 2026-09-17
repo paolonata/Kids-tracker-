@@ -3,6 +3,7 @@ package com.kidstracker.ui.schermate
 import android.content.Context
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -36,10 +37,9 @@ import com.kidstracker.data.Backup
 import com.kidstracker.data.Excel
 import com.kidstracker.domain.Bambino
 import com.kidstracker.domain.Giornata
-import com.kidstracker.domain.Voto
+import com.kidstracker.ui.componenti.AvatarBambino
 import com.kidstracker.ui.componenti.BottoneContornato
 import com.kidstracker.ui.componenti.BottoneSticker
-import com.kidstracker.ui.componenti.Faccina
 import com.kidstracker.ui.componenti.IconaFreccia
 import com.kidstracker.ui.componenti.IconaOrologio
 import com.kidstracker.ui.componenti.IntestazionePrugna
@@ -71,9 +71,12 @@ fun SchermataImpostazioni(
     temaCorrente: TemaScelto,
     onTema: (TemaScelto) -> Unit,
     onRinomina: (Bambino, String) -> Unit,
+    onFoto: (Bambino, Uri) -> Unit,
+    onRimuoviFoto: (Bambino) -> Unit,
     onPromemoria: (Boolean) -> Unit,
     onOra: (Int) -> Unit,
     onEsporta: suspend () -> Pair<List<Bambino>, List<Giornata>>,
+    onBackupJson: suspend () -> String,
     onImporta: suspend (Backup.Importazione, Boolean) -> Int,
     onCancellaTutto: () -> Unit,
     onIndietro: () -> Unit,
@@ -84,14 +87,23 @@ fun SchermataImpostazioni(
     var messaggio by remember { mutableStateOf<String?>(null) }
     var chiedeConferma by remember { mutableStateOf(false) }
 
+    // Un solo selettore di foto per tutti i bambini: si ricorda chi l'ha aperto.
+    var inAttesaDiFoto by remember { mutableStateOf<Long?>(null) }
+    val scegliFoto = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri: Uri? ->
+        val bambino = bambini.firstOrNull { it.id == inAttesaDiFoto }
+        inAttesaDiFoto = null
+        if (uri != null && bambino != null) onFoto(bambino, uri)
+    }
+
     val salvaJson = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
     ) { uri: Uri? ->
         if (uri == null) return@rememberLauncherForActivityResult
         ambito.launch {
-            val (elenco, giornate) = onEsporta()
-            val testo = Backup.esportaJson(elenco, giornate)
-            messaggio = scrivi(contesto, uri, testo, "${giornate.size} giornate esportate")
+            val testo = onBackupJson()
+            messaggio = scrivi(contesto, uri, testo, "Backup salvato, foto comprese")
         }
     }
 
@@ -163,6 +175,13 @@ fun SchermataImpostazioni(
         ) {
             SchedaSticker {
                 Text("I bambini", style = MaterialTheme.typography.headlineSmall)
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    "Tocca la faccina per mettere la loro foto: resta su questo telefono " +
+                        "e finisce nel backup insieme allo storico.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = InkTerziario
+                )
                 bambini.forEach { bambino ->
                     Spacer(Modifier.height(12.dp))
                     var nome by remember(bambino.id) { mutableStateOf(bambino.nome) }
@@ -170,12 +189,26 @@ fun SchermataImpostazioni(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Faccina(
-                            voto = Voto.SI,
-                            dimensione = 34.dp,
-                            riempimento = coloreBambino(bambino.coloreIndex),
-                            tratto = InchiostroFaccina
-                        )
+                        Box(
+                            modifier = Modifier.clickable(
+                                role = Role.Button,
+                                onClickLabel = "Scegli la foto di ${bambino.nome}"
+                            ) {
+                                inAttesaDiFoto = bambino.id
+                                scegliFoto.launch(
+                                    PickVisualMediaRequest(
+                                        ActivityResultContracts.PickVisualMedia.ImageOnly
+                                    )
+                                )
+                            }
+                        ) {
+                            AvatarBambino(
+                                foto = bambino.foto,
+                                dimensione = 46.dp,
+                                riempimento = coloreBambino(bambino.coloreIndex),
+                                tratto = InchiostroFaccina
+                            )
+                        }
                         CampoNome(
                             valore = nome,
                             posizione = bambino.coloreIndex + 1,
@@ -185,6 +218,30 @@ fun SchermataImpostazioni(
                             },
                             modifier = Modifier.weight(1f)
                         )
+                    }
+                    Spacer(Modifier.height(7.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                        BottoneSticker(
+                            testo = if (bambino.foto == null) "Scegli una foto" else "Cambia foto",
+                            onClick = {
+                                inAttesaDiFoto = bambino.id
+                                scegliFoto.launch(
+                                    PickVisualMediaRequest(
+                                        ActivityResultContracts.PickVisualMedia.ImageOnly
+                                    )
+                                )
+                            },
+                            sfondo = Superficie,
+                            modifier = Modifier.weight(1f)
+                        )
+                        if (bambino.foto != null) {
+                            BottoneSticker(
+                                testo = "Togli",
+                                onClick = { onRimuoviFoto(bambino) },
+                                sfondo = Crema,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
                     }
                 }
             }

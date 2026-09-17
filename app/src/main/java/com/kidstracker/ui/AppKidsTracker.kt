@@ -59,11 +59,7 @@ fun AppKidsTracker(vm: KidsViewModel) {
             StatoAvvio.ServeOnboarding -> SchermataOnboarding(
                 onConferma = { nomi -> vm.creaBambini(nomi) },
                 onRipristina = { importazione ->
-                    vm.applicaImportazione(
-                        importazione.nomiBambini,
-                        importazione.giornate,
-                        sostituisci = true
-                    )
+                    vm.applicaImportazione(importazione, sostituisci = true)
                 }
             )
 
@@ -183,6 +179,8 @@ private fun ContenutoPrincipale(vm: KidsViewModel) {
                     temaCorrente = vm.tema,
                     onTema = vm::impostaTema,
                     onRinomina = vm::rinomina,
+                    onFoto = vm::scegliFoto,
+                    onRimuoviFoto = vm::rimuoviFoto,
                     onPromemoria = { attivo ->
                         promemoriaAttivo = attivo
                         vm.preferenze.promemoriaAttivo = attivo
@@ -195,12 +193,9 @@ private fun ContenutoPrincipale(vm: KidsViewModel) {
                         Promemoria.riprogramma(contesto, vm.preferenze)
                     },
                     onEsporta = { bambini to vm.tutteLeGiornate() },
+                    onBackupJson = { vm.backupJson() },
                     onImporta = { importazione, sostituisci ->
-                        vm.applicaImportazione(
-                            importazione.nomiBambini,
-                            importazione.giornate,
-                            sostituisci
-                        )
+                        vm.applicaImportazione(importazione, sostituisci)
                     },
                     onCancellaTutto = { vm.cancellaTutteLeGiornate() },
                     onIndietro = { nav.popBackStack() },

@@ -12,7 +12,13 @@ enum class Voto(val punti: Int, val etichetta: String) {
 enum class Presenza(val etichetta: String) {
     SCUOLA("A scuola"),
     ASSENTE("Assente"),
-    USCITO_PRIMA("Uscito prima")
+    USCITO_PRIMA("Uscito prima"),
+
+    /**
+     * Ponte, gita, chiusura: la giornata è chiusa ma non dice niente su come
+     * sta andando il bambino, quindi resta fuori da tutte le statistiche.
+     */
+    FESTIVO("Festivo")
 }
 
 enum class Salute(val etichetta: String) {
@@ -41,12 +47,14 @@ enum class Categoria(val etichetta: String) {
 }
 
 /** Come è andata la giornata nel complesso: è quello che colora calendario e grafici. */
-enum class Giudizio { BUONO, COSI_COSI, DIFFICILE, ASSENTE, NON_REGISTRATO }
+enum class Giudizio { BUONO, COSI_COSI, DIFFICILE, ASSENTE, FESTIVO, NON_REGISTRATO }
 
 data class Bambino(
     val id: Long,
     val nome: String,
-    val coloreIndex: Int
+    val coloreIndex: Int,
+    /** Nome del file della foto, se ne è stata scelta una. */
+    val foto: String? = null
 )
 
 data class Giornata(
@@ -61,6 +69,17 @@ data class Giornata(
     /** Vuota davvero: niente da salvare e niente da mostrare nel calendario. */
     val vuota: Boolean
         get() = presenza == Presenza.SCUOLA && voti.isEmpty() && salute == Salute.BENE && nota.isBlank()
+
+    /** Un giorno festivo è segnato, ma non racconta nulla: fuori da medie e confronti. */
+    val festiva: Boolean
+        get() = presenza == Presenza.FESTIVO
+
+    /**
+     * Le giornate che possono entrare in una statistica: segnate e non festive.
+     * È il filtro che tutte le funzioni di [Statistiche] applicano per prime.
+     */
+    val contaNelleAnalisi: Boolean
+        get() = !vuota && !festiva
 
     val completa: Boolean
         get() = presenza != Presenza.SCUOLA || voti.size == Categoria.tutte.size
@@ -78,6 +97,7 @@ data class Giornata(
         }
 
     private fun indice(categorie: List<Categoria>): Int? {
+        if (presenza == Presenza.ASSENTE || festiva) return null
         val presenti = categorie.mapNotNull { voti[it] }
         if (presenti.isEmpty()) return null
         return (presenti.sumOf { it.punti } * 100) / (presenti.size * 2)
@@ -85,20 +105,21 @@ data class Giornata(
 
     /** Solo primo, secondo e dolce. */
     val indicePappa: Int?
-        get() = if (presenza == Presenza.ASSENTE) null else indice(Categoria.pasti)
+        get() = indice(Categoria.pasti)
 
     /** Tutte e sei le categorie, pesate uguale. */
     val indiceGiornata: Int?
-        get() = if (presenza == Presenza.ASSENTE) null else indice(Categoria.tutte)
+        get() = indice(Categoria.tutte)
 
     val haRossi: Boolean
-        get() = presenza != Presenza.ASSENTE && voti.values.any { it == Voto.NO }
+        get() = presenza != Presenza.ASSENTE && !festiva && voti.values.any { it == Voto.NO }
 
     val stavaPocoBene: Boolean
-        get() = salute != Salute.BENE
+        get() = salute != Salute.BENE && !festiva
 
     val giudizio: Giudizio
         get() {
+            if (festiva) return Giudizio.FESTIVO
             if (presenza == Presenza.ASSENTE) return Giudizio.ASSENTE
             val indice = indiceGiornata ?: return Giudizio.NON_REGISTRATO
             return when {

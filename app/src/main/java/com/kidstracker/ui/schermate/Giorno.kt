@@ -54,6 +54,8 @@ import com.kidstracker.ui.tema.InchiostroFaccina
 import com.kidstracker.ui.tema.Inchiostro
 import com.kidstracker.ui.tema.InkSecondario
 import com.kidstracker.ui.tema.InkTenue
+import com.kidstracker.ui.tema.MicroEtichetta
+import com.kidstracker.ui.tema.MicroEtichettaStretta
 import com.kidstracker.ui.tema.Rosa
 import com.kidstracker.ui.tema.coloreBambino
 import com.kidstracker.ui.tema.coloreGiudizio
@@ -168,22 +170,32 @@ fun SchermataGiorno(
             SchedaSticker {
                 EtichettaSezione("Presenza")
                 Spacer(Modifier.height(11.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                    Presenza.entries.forEach { presenza ->
-                        PillolaScelta(
-                            testo = presenza.etichetta,
-                            selezionata = giornata.presenza == presenza,
-                            onClick = { onPresenza(bambino.id, presenza) },
-                            modifier = Modifier.weight(1f)
-                        )
+                // Quattro opzioni su una riga sola diventavano illeggibili:
+                // due per riga lasciano respirare le etichette lunghe.
+                Presenza.entries.chunked(2).forEachIndexed { riga, coppia ->
+                    if (riga > 0) Spacer(Modifier.height(7.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                        coppia.forEach { presenza ->
+                            PillolaScelta(
+                                testo = presenza.etichetta,
+                                selezionata = giornata.presenza == presenza,
+                                onClick = { onPresenza(bambino.id, presenza) },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
                     }
                 }
             }
 
-            if (giornata.presenza == Presenza.ASSENTE) {
+            val giornataChiusa = giornata.presenza == Presenza.ASSENTE || giornata.festiva
+            if (giornataChiusa) {
                 SchedaSticker(sfondo = Crema) {
                     Text(
-                        "Giornata segnata come assenza: le faccine non servono.",
+                        if (giornata.festiva) {
+                            "Giornata segnata come festiva: non conta nelle analisi."
+                        } else {
+                            "Giornata segnata come assenza: le faccine non servono."
+                        },
                         style = MaterialTheme.typography.bodyLarge,
                         color = InkSecondario
                     )
@@ -262,7 +274,7 @@ fun SchermataGiorno(
 private fun EtichettaSezione(testo: String) {
     Text(
         testo.uppercase(),
-        style = MaterialTheme.typography.labelMedium,
+        style = MicroEtichetta,
         color = InkTenue
     )
 }
@@ -276,7 +288,7 @@ private fun IntestazioneColonne() {
             if (indice > 0) Spacer(Modifier.width(9.dp))
             Text(
                 testo,
-                style = MaterialTheme.typography.labelSmall,
+                style = MicroEtichettaStretta,
                 color = InkSecondario,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.width(52.dp)

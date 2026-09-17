@@ -14,6 +14,14 @@ object Statistiche {
     data class PuntoSerie(val data: LocalDate, val valore: Double?)
 
     /**
+     * Il filtro che precede ogni calcolo: via le giornate mai toccate e via
+     * quelle festive. Un ponte o una gita non dicono niente su come mangia o
+     * dorme un bambino, e lasciarli dentro sposterebbe le medie senza motivo.
+     */
+    fun analizzabili(giornate: List<Giornata>): List<Giornata> =
+        giornate.filter { it.contaNelleAnalisi }
+
+    /**
      * Media mobile all'indietro: ogni punto è la media dei giorni registrati
      * nella finestra che finisce quel giorno. I giorni senza dati non contano
      * (non valgono zero), così un'assenza non finge un crollo.
@@ -24,7 +32,7 @@ object Statistiche {
         a: LocalDate,
         finestra: Int = 7
     ): List<PuntoSerie> {
-        val perData = giornate.associate { it.data to it.indiceGiornata }
+        val perData = analizzabili(giornate).associate { it.data to it.indiceGiornata }
         val risultato = mutableListOf<PuntoSerie>()
         var giorno = da
         while (!giorno.isAfter(a)) {
@@ -42,7 +50,7 @@ object Statistiche {
 
     /** Indice medio per giorno della settimana, solo sui giorni davvero registrati. */
     fun mediaPerGiornoSettimana(giornate: List<Giornata>): Map<DayOfWeek, Double> =
-        giornate
+        analizzabili(giornate)
             .mapNotNull { g -> g.indiceGiornata?.let { g.data.dayOfWeek to it } }
             .groupBy({ it.first }, { it.second })
             .mapValues { (_, valori) -> valori.average() }
@@ -64,7 +72,7 @@ object Statistiche {
 
     /** Confronta l'indice pappa nei giorni in forma contro quelli in cui stava poco bene. */
     fun confrontoSalute(giornate: List<Giornata>): ConfrontoSalute {
-        val conPappa = giornate.filter { it.indicePappa != null }
+        val conPappa = analizzabili(giornate).filter { it.indicePappa != null }
         val inForma = conPappa.filter { !it.stavaPocoBene }.mapNotNull { it.indicePappa }
         val pocoBene = conPappa.filter { it.stavaPocoBene }.mapNotNull { it.indicePappa }
         return ConfrontoSalute(
@@ -84,7 +92,8 @@ object Statistiche {
         val ordinate = giornate.filter { !it.vuota }.sortedByDescending { it.data }
         var conta = 0
         for (g in ordinate) {
-            if (g.presenza == Presenza.ASSENTE) continue
+            // Assenze e festivi si saltano: non spezzano la striscia né la allungano.
+            if (g.presenza == Presenza.ASSENTE || g.festiva) continue
             if (g.haRossi) break
             if (g.indiceGiornata == null) continue
             conta++
@@ -99,7 +108,7 @@ object Statistiche {
         var corrente = 0
         for (g in ordinate) {
             when {
-                g.presenza == Presenza.ASSENTE -> Unit
+                g.presenza == Presenza.ASSENTE || g.festiva -> Unit
                 g.haRossi -> corrente = 0
                 g.indiceGiornata != null -> {
                     corrente++
@@ -112,7 +121,9 @@ object Statistiche {
 
     /** Media di una categoria su una lista di giornate, in percentuale. */
     fun mediaCategoria(giornate: List<Giornata>, categoria: Categoria): Double? {
-        val voti = giornate.filter { it.presenza != Presenza.ASSENTE }.mapNotNull { it.voti[categoria] }
+        val voti = analizzabili(giornate)
+            .filter { it.presenza != Presenza.ASSENTE }
+            .mapNotNull { it.voti[categoria] }
         if (voti.isEmpty()) return null
         return voti.sumOf { it.punti } * 100.0 / (voti.size * 2)
     }
@@ -155,8 +166,8 @@ object Statistiche {
         minimoGiorni: Int = 3
     ): List<DifferenzaGemelli> =
         Categoria.tutte.mapNotNull { categoria ->
-            val a = primo.filter { it.voti.containsKey(categoria) }
-            val b = secondo.filter { it.voti.containsKey(categoria) }
+            val a = analizzabili(primo).filter { it.voti.containsKey(categoria) }
+            val b = analizzabili(secondo).filter { it.voti.containsKey(categoria) }
             if (a.size < minimoGiorni || b.size < minimoGiorni) return@mapNotNull null
             val mediaA = mediaCategoria(a, categoria) ?: return@mapNotNull null
             val mediaB = mediaCategoria(b, categoria) ?: return@mapNotNull null
@@ -170,7 +181,7 @@ object Statistiche {
      * Serve a dire "il lunedì è il giorno peggiore" con un numero dietro.
      */
     fun entrateDifficiliPerGiorno(giornate: List<Giornata>): List<ConteggioGiorno> =
-        giornate
+        analizzabili(giornate)
             .filter { it.presenza != Presenza.ASSENTE && it.voti.containsKey(Categoria.ENTRATA) }
             .groupBy { it.data.dayOfWeek }
             .map { (giorno, lista) ->

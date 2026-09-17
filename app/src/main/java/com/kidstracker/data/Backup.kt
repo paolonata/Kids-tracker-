@@ -18,16 +18,30 @@ import java.time.LocalDate
  */
 object Backup {
 
-    const val VERSIONE = 1
+    /**
+     * 2: i bambini portano con sé la foto in base64 e la presenza può valere FESTIVO.
+     * I file della versione 1 restano leggibili: i campi nuovi sono semplicemente assenti.
+     */
+    const val VERSIONE = 2
 
     data class GiornataImportata(val nomeBambino: String, val giornata: Giornata)
 
     data class Importazione(
         val nomiBambini: List<String>,
-        val giornate: List<GiornataImportata>
+        val giornate: List<GiornataImportata>,
+        /** Foto in base64 per nome del bambino, vuota se il backup non ne aveva. */
+        val fotoPerNome: Map<String, String> = emptyMap()
     )
 
-    fun esportaJson(bambini: List<Bambino>, giornate: List<Giornata>): String {
+    /**
+     * [fotoBase64] riceve il nome del file della foto e restituisce il contenuto
+     * codificato: sta al chiamante leggerlo dal disco, qui non si tocca il filesystem.
+     */
+    fun esportaJson(
+        bambini: List<Bambino>,
+        giornate: List<Giornata>,
+        fotoBase64: (Bambino) -> String? = { null }
+    ): String {
         val perId = bambini.associateBy { it.id }
         val radice = JSONObject()
         radice.put("app", "kids-tracker")
@@ -36,11 +50,11 @@ object Backup {
 
         val arrayBambini = JSONArray()
         bambini.forEach { b ->
-            arrayBambini.put(
-                JSONObject()
-                    .put("nome", b.nome)
-                    .put("coloreIndex", b.coloreIndex)
-            )
+            val oggetto = JSONObject()
+                .put("nome", b.nome)
+                .put("coloreIndex", b.coloreIndex)
+            fotoBase64(b)?.takeIf { it.isNotBlank() }?.let { oggetto.put("foto", it) }
+            arrayBambini.put(oggetto)
         }
         radice.put("bambini", arrayBambini)
 
@@ -68,11 +82,15 @@ object Backup {
         val radice = JSONObject(testo)
 
         val nomi = mutableListOf<String>()
+        val foto = mutableMapOf<String, String>()
         val arrayBambini = radice.optJSONArray("bambini")
         if (arrayBambini != null) {
             for (i in 0 until arrayBambini.length()) {
-                val nome = arrayBambini.getJSONObject(i).optString("nome").trim()
-                if (nome.isNotEmpty()) nomi += nome
+                val bambino = arrayBambini.getJSONObject(i)
+                val nome = bambino.optString("nome").trim()
+                if (nome.isEmpty()) continue
+                nomi += nome
+                bambino.optString("foto", "").takeIf { it.isNotBlank() }?.let { foto[nome] = it }
             }
         }
 
@@ -108,7 +126,7 @@ object Backup {
         }
 
         val nomiCompleti = (nomi + giornate.map { it.nomeBambino }).distinct()
-        return Importazione(nomiCompleti, giornate)
+        return Importazione(nomiCompleti, giornate, foto)
     }
 
     fun esportaCsv(bambini: List<Bambino>, giornate: List<Giornata>): String {
@@ -205,10 +223,13 @@ object Backup {
             nome = "Riepilogo",
             intestazioni = listOf(
                 "bambino", "giornate segnate", "indice giornata medio", "indice pappa medio",
-                "giornate buone", "così così", "difficili", "assenze", "striscia record"
+                "giornate buone", "così così", "difficili", "assenze", "festivi", "striscia record"
             ),
             righe = bambini.map { bambino ->
-                val sue = ordinate.filter { it.bambinoId == bambino.id && !it.vuota }
+                val tutte = ordinate.filter { it.bambinoId == bambino.id && !it.vuota }
+                // I festivi sono giornate chiuse: si contano a parte e restano
+                // fuori da medie e conteggi, come in tutto il resto dell'app.
+                val sue = Statistiche.analizzabili(tutte)
                 val indici = sue.mapNotNull { it.indiceGiornata }
                 val pappe = sue.mapNotNull { it.indicePappa }
                 listOf(
@@ -220,6 +241,7 @@ object Backup {
                     Excel.numero(sue.count { it.giudizio == Giudizio.COSI_COSI }),
                     Excel.numero(sue.count { it.giudizio == Giudizio.DIFFICILE }),
                     Excel.numero(sue.count { it.presenza == Presenza.ASSENTE }),
+                    Excel.numero(tutte.count { it.festiva }),
                     Excel.numero(Statistiche.strisciaRecord(sue))
                 )
             }

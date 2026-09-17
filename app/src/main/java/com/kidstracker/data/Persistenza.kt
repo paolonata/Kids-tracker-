@@ -11,6 +11,8 @@ import androidx.room.Query
 import androidx.room.RoomDatabase
 import androidx.room.Update
 import androidx.room.Upsert
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.flow.Flow
 
 @Entity(tableName = "bambini")
@@ -18,7 +20,9 @@ data class BambinoEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val nome: String,
     val coloreIndex: Int,
-    val ordine: Int
+    val ordine: Int,
+    /** Nome del file nella cartella privata delle foto, null se non c'è. */
+    val foto: String? = null
 )
 
 @Entity(
@@ -68,6 +72,9 @@ interface KidsDao {
     @Query("DELETE FROM bambini WHERE id = :id")
     suspend fun eliminaBambino(id: Long)
 
+    @Query("UPDATE bambini SET foto = :foto WHERE id = :id")
+    suspend fun aggiornaFoto(id: Long, foto: String?)
+
     @Query("SELECT * FROM giornate WHERE giorno BETWEEN :da AND :a")
     fun osservaIntervallo(da: Long, a: Long): Flow<List<GiornataEntity>>
 
@@ -95,7 +102,7 @@ interface KidsDao {
 
 @Database(
     entities = [BambinoEntity::class, GiornataEntity::class],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class KidsDatabase : RoomDatabase() {
@@ -103,5 +110,15 @@ abstract class KidsDatabase : RoomDatabase() {
 
     companion object {
         const val NOME = "kids.db"
+
+        /**
+         * Aggiunge la colonna della foto senza toccare nulla del resto:
+         * chi ha già l'app installata non deve perdere lo storico.
+         */
+        val DA_1_A_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE bambini ADD COLUMN foto TEXT")
+            }
+        }
     }
 }

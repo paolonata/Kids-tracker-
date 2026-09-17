@@ -1,6 +1,7 @@
 package com.kidstracker
 
 import com.kidstracker.data.Backup
+import com.kidstracker.data.Excel
 import com.kidstracker.domain.Bambino
 import com.kidstracker.domain.Categoria
 import com.kidstracker.domain.Giornata
@@ -85,6 +86,38 @@ class BackupTest {
         """.trimIndent()
 
         assertEquals(1, Backup.importaJson(testo).giornate.size)
+    }
+
+    @Test
+    fun `il giorno festivo attraversa il backup senza cambiare`() {
+        val conFestivo = giornate + Giornata(
+            bambinoId = 1L,
+            data = LocalDate.of(2026, 9, 16),
+            presenza = Presenza.FESTIVO
+        )
+        val riletto = Backup.importaJson(Backup.esportaJson(bambini, conFestivo))
+        val festivo = riletto.giornate.first { it.giornata.data == LocalDate.of(2026, 9, 16) }
+        assertEquals(Presenza.FESTIVO, festivo.giornata.presenza)
+        assertTrue(festivo.giornata.festiva)
+
+        val righe = Backup.esportaCsv(bambini, conFestivo).lines()
+        assertTrue(righe.any { it.contains(";FESTIVO;") })
+
+        // Nel foglio leggibile ci va scritto in chiaro, senza indici accanto.
+        val giornateFoglio = Backup.fogliExcel(bambini, conFestivo).first { it.nome == "Giornate" }
+        val riga = giornateFoglio.righe.last()
+        assertEquals(Excel.Cella.Testo("Festivo"), riga[3])
+        assertEquals(Excel.Cella.Vuota, riga[11])
+        assertEquals(Excel.Cella.Vuota, riga[12])
+    }
+
+    @Test
+    fun `le foto viaggiano dentro il json e tornano indietro`() {
+        val testo = Backup.esportaJson(bambini, giornate) { bambino ->
+            if (bambino.nome == "Aurora") "QUFB" else null
+        }
+        val riletto = Backup.importaJson(testo)
+        assertEquals(mapOf("Aurora" to "QUFB"), riletto.fotoPerNome)
     }
 
     @Test

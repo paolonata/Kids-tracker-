@@ -20,6 +20,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
 import com.kidstracker.R
@@ -228,6 +229,8 @@ fun coloreGiudizio(giudizio: Giudizio): Color = when (giudizio) {
     Giudizio.COSI_COSI -> Giallo
     Giudizio.DIFFICILE -> Rosso
     Giudizio.ASSENTE -> Crema
+    // Il festivo non ha un colore suo: la cella del calendario ci mette il velo.
+    Giudizio.FESTIVO -> Color.Transparent
     Giudizio.NON_REGISTRATO -> Color.Transparent
 }
 
@@ -291,6 +294,21 @@ val TipografiaKids = Typography(
     labelMedium = TextStyle(fontFamily = Figtree, fontWeight = FontWeight.ExtraBold, fontSize = 11.sp, lineHeight = 15.sp),
     labelSmall = TextStyle(fontFamily = Figtree, fontWeight = FontWeight.ExtraBold, fontSize = 10.sp, lineHeight = 13.sp)
 )
+
+/**
+ * Le etichettine tutte maiuscole ("PRESENZA", "NOTA", "COSÌ COSÌ"). Le maiuscole
+ * attaccate si leggono male: un filo di spaziatura fra le lettere le separa.
+ */
+val MicroEtichetta = TextStyle(
+    fontFamily = Figtree,
+    fontWeight = FontWeight.ExtraBold,
+    fontSize = 11.sp,
+    lineHeight = 15.sp,
+    letterSpacing = 0.06.em
+)
+
+/** Come [MicroEtichetta], ma per le colonne strette sopra le faccine. */
+val MicroEtichettaStretta = MicroEtichetta.copy(fontSize = 10.sp, lineHeight = 13.sp)
 
 // ---- misure ricorrenti ---------------------------------------------------------------
 

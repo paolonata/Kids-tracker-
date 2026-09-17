@@ -199,5 +199,63 @@ class StatisticheTest {
             Giornata.TOTALE_SEGNABILI,
             giornata(1, presenza = Presenza.ASSENTE).segnate
         )
+        // Anche il festivo è una giornata chiusa: niente barra a metà.
+        assertEquals(
+            Giornata.TOTALE_SEGNABILI,
+            giornata(1, presenza = Presenza.FESTIVO).segnate
+        )
+    }
+
+    // ---- giorni festivi ---------------------------------------------------------------
+
+    @Test
+    fun `un giorno festivo non ha indice e ha il suo giudizio`() {
+        val festivo = giornata(1, *tutte(Voto.SI), presenza = Presenza.FESTIVO)
+        assertNull(festivo.indiceGiornata)
+        assertNull(festivo.indicePappa)
+        assertEquals(Giudizio.FESTIVO, festivo.giudizio)
+        assertTrue(festivo.festiva)
+        assertTrue(!festivo.contaNelleAnalisi)
+    }
+
+    @Test
+    fun `un giorno festivo resta fuori dalle medie`() {
+        val soloScuola = listOf(
+            giornata(1, *tutte(Voto.SI)),
+            giornata(2, *tutte(Voto.NO))
+        )
+        // Lo stesso elenco con in mezzo un festivo pieno di verdi: la media non si muove.
+        val conFestivo = listOf(
+            giornata(1, *tutte(Voto.SI)),
+            giornata(2, *tutte(Voto.NO)),
+            giornata(3, *tutte(Voto.SI), presenza = Presenza.FESTIVO)
+        )
+        assertEquals(50.0, Statistiche.mediaCategoria(soloScuola, Categoria.PRIMO)!!, 0.001)
+        assertEquals(50.0, Statistiche.mediaCategoria(conFestivo, Categoria.PRIMO)!!, 0.001)
+        assertEquals(2, Statistiche.analizzabili(conFestivo).size)
+    }
+
+    @Test
+    fun `un giorno festivo non spezza la striscia`() {
+        val giornate = listOf(
+            giornata(1, *tutte(Voto.SI)),
+            giornata(2, presenza = Presenza.FESTIVO), // ponte: si salta
+            giornata(3, *tutte(Voto.COSI_COSI)),
+            giornata(4, *tutte(Voto.SI))
+        )
+        assertEquals(3, Statistiche.strisciaCorrente(giornate))
+        assertEquals(3, Statistiche.strisciaRecord(giornate))
+    }
+
+    @Test
+    fun `un giorno festivo non conta come poco bene`() {
+        val festivo = giornata(
+            1,
+            *tutte(Voto.NO),
+            presenza = Presenza.FESTIVO,
+            salute = Salute.FEBBRE
+        )
+        assertTrue(!festivo.stavaPocoBene)
+        assertTrue(!festivo.haRossi)
     }
 }

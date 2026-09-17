@@ -17,13 +17,13 @@ class KidsRepository(private val dao: KidsDao) {
 
     suspend fun quantiBambini(): Int = dao.quantiBambini()
 
-    suspend fun creaBambini(nomi: List<String>) {
-        nomi.forEachIndexed { indice, nome ->
+    /** Restituisce gli id creati, nell'ordine dei nomi ricevuti. */
+    suspend fun creaBambini(nomi: List<String>): List<Long> =
+        nomi.mapIndexed { indice, nome ->
             dao.inserisciBambino(
                 BambinoEntity(nome = nome.trim(), coloreIndex = indice, ordine = indice)
             )
         }
-    }
 
     suspend fun rinomina(bambino: Bambino, nome: String) {
         dao.aggiornaBambino(
@@ -31,10 +31,14 @@ class KidsRepository(private val dao: KidsDao) {
                 id = bambino.id,
                 nome = nome.trim(),
                 coloreIndex = bambino.coloreIndex,
-                ordine = bambino.coloreIndex
+                ordine = bambino.coloreIndex,
+                foto = bambino.foto
             )
         )
     }
+
+    suspend fun impostaFoto(bambinoId: Long, nomeFile: String?) =
+        dao.aggiornaFoto(bambinoId, nomeFile)
 
     suspend fun eliminaBambino(id: Long) = dao.eliminaBambino(id)
 
@@ -68,7 +72,8 @@ class KidsRepository(private val dao: KidsDao) {
 
 // ---- mappatura fra tabella e dominio -------------------------------------------------
 
-internal fun BambinoEntity.aDominio() = Bambino(id = id, nome = nome, coloreIndex = coloreIndex)
+internal fun BambinoEntity.aDominio() =
+    Bambino(id = id, nome = nome, coloreIndex = coloreIndex, foto = foto)
 
 internal fun GiornataEntity.aDominio(): Giornata {
     val voti = buildMap {

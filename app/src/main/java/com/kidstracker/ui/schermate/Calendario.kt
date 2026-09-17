@@ -1,5 +1,6 @@
 package com.kidstracker.ui.schermate
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -68,7 +70,8 @@ fun SchermataCalendario(
     val bambino = bambinoCorrente ?: return
     val sue = giornate.filter { it.bambinoId == bambino.id }
     val perGiorno = sue.associateBy { it.data }
-    val segnate = sue.count { !it.vuota }
+    // I festivi sono segnati ma non raccontano niente: fuori dal conteggio.
+    val segnate = sue.count { it.contaNelleAnalisi }
 
     Column(modifier = modifier) {
         IntestazionePrugna(
@@ -158,6 +161,7 @@ private fun GrigliaMese(
                         giorno = giorno,
                         giornata = giorno?.let { perGiorno[it] },
                         futuro = giorno != null && giorno.isAfter(oggi),
+                        fineSettimana = giorno != null && giorno.dayOfWeek.value >= 6,
                         onClick = { giorno?.let(onApriGiorno) },
                         modifier = Modifier.weight(1f)
                     )
@@ -169,16 +173,26 @@ private fun GrigliaMese(
     }
 }
 
+/**
+ * Una casella del mese. Sabato e domenica non sono mai stati giorni di scuola:
+ * restano velati e non si aprono, così non si segnano per sbaglio. Il festivo
+ * si vede allo stesso modo, ma con il tratteggio che dice "qui hai deciso tu".
+ */
 @Composable
 private fun CellaGiorno(
     giorno: LocalDate?,
     giornata: Giornata?,
     futuro: Boolean,
+    fineSettimana: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val giudizio = giornata?.giudizio ?: Giudizio.NON_REGISTRATO
     val registrata = giornata != null && !giornata.vuota
+    val festiva = giudizio == Giudizio.FESTIVO
+    val velata = fineSettimana || festiva
+    val apribile = giorno != null && !futuro && !fineSettimana
+    val velo = TratteggioTenue.copy(alpha = 0.33f)
 
     Box(
         modifier = modifier
@@ -186,6 +200,8 @@ private fun CellaGiorno(
             .then(
                 when {
                     giorno == null -> Modifier
+                    fineSettimana -> Modifier
+                    festiva -> Modifier.bordoTratteggiato(15.dp, InkTenue)
                     giudizio == Giudizio.ASSENTE -> Modifier.bordoTratteggiato(15.dp, InkTenue)
                     registrata -> Modifier.sticker(coloreGiudizio(giudizio), 15.dp, ombra = false)
                     futuro -> Modifier
@@ -193,10 +209,13 @@ private fun CellaGiorno(
                 }
             )
             .then(
-                if (giorno != null && !futuro) {
+                if (velata) Modifier.background(velo, RoundedCornerShape(15.dp)) else Modifier
+            )
+            .then(
+                if (apribile) {
                     Modifier.clickable(
                         role = Role.Button,
-                        onClickLabel = "Apri ${Formati.dataCorta(giorno)}",
+                        onClickLabel = "Apri ${Formati.dataCorta(giorno!!)}",
                         onClick = onClick
                     )
                 } else {
@@ -207,7 +226,7 @@ private fun CellaGiorno(
     ) {
         if (giorno == null) return@Box
 
-        if (registrata && giudizio != Giudizio.ASSENTE) {
+        if (registrata && !velata && giudizio != Giudizio.ASSENTE) {
             Faccina(
                 voto = when (giudizio) {
                     Giudizio.BUONO -> Voto.SI
@@ -222,11 +241,11 @@ private fun CellaGiorno(
             Text(
                 giorno.dayOfMonth.toString(),
                 style = MaterialTheme.typography.labelLarge,
-                color = if (futuro) TratteggioTenue else InkTenue
+                color = if (futuro || fineSettimana) TratteggioTenue else InkTenue
             )
         }
 
-        if (registrata) {
+        if (registrata && !velata) {
             Text(
                 giorno.dayOfMonth.toString(),
                 style = MaterialTheme.typography.labelSmall,
@@ -237,7 +256,7 @@ private fun CellaGiorno(
             )
         }
 
-        if (giornata != null && giornata.stavaPocoBene) {
+        if (giornata != null && giornata.stavaPocoBene && !velata) {
             Box(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
@@ -285,7 +304,8 @@ private fun Legenda() {
             }
         }
         Text(
-            "Il cerchietto in alto a destra segna i giorni in cui stava poco bene.",
+            "Il cerchietto in alto a destra segna i giorni in cui stava poco bene. " +
+                "Sabato, domenica e i giorni segnati come festivi restano fuori dalle analisi.",
             style = MaterialTheme.typography.labelMedium,
             color = InkTenue
         )
@@ -293,9 +313,11 @@ private fun Legenda() {
 }
 
 @Composable
-private fun RiepilogoMese(giornate: List<Giornata>) {
+private fun RiepilogoMese(tutte: List<Giornata>) {
+    // Da qui in giù si ragiona solo sulle giornate che contano: niente festivi.
+    val giornate = Statistiche.analizzabili(tutte)
     val buone = giornate.count { it.giudizio == Giudizio.BUONO }
-    val segnate = giornate.count { !it.vuota }
+    val segnate = giornate.size
     val pappa = Statistiche.mediaCategoria(giornate, Categoria.PRIMO)
         ?.let { primo ->
             listOfNotNull(

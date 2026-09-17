@@ -1,5 +1,7 @@
 package com.kidstracker.ui
 
+import android.content.Context
+import android.net.Uri
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -10,6 +12,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.kidstracker.KidsTrackerApp
 import com.kidstracker.data.Backup
+import com.kidstracker.data.Foto
 import com.kidstracker.data.KidsRepository
 import com.kidstracker.data.Preferenze
 import com.kidstracker.domain.Bambino
@@ -28,14 +31,16 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.YearMonth
 
 enum class Periodo(val giorni: Int, val etichetta: String) {
     SETTIMANA(7, "7 giorni"),
-    MESE(30, "30 giorni"),
-    TRIMESTRE(90, "3 mesi")
+    DUE_SETTIMANE(14, "14 giorni"),
+    MESE(30, "30 giorni")
 }
 
 /** Stato iniziale: serve l'onboarding o si può entrare? */
@@ -48,7 +53,8 @@ sealed interface StatoAvvio {
 @OptIn(ExperimentalCoroutinesApi::class)
 class KidsViewModel(
     private val repo: KidsRepository,
-    val preferenze: Preferenze
+    val preferenze: Preferenze,
+    private val contesto: Context
 ) : ViewModel() {
 
     private val oggi: LocalDate get() = LocalDate.now()
@@ -68,7 +74,7 @@ class KidsViewModel(
     private val _idSelezionato = MutableStateFlow<Long?>(null)
     private val _data = MutableStateFlow(LocalDate.now())
     private val _mese = MutableStateFlow(YearMonth.now())
-    private val _periodo = MutableStateFlow(Periodo.MESE)
+    private val _periodo = MutableStateFlow(Periodo.DUE_SETTIMANE)
     private val _statoAvvio = MutableStateFlow<StatoAvvio>(StatoAvvio.Caricamento)
 
     val data: StateFlow<LocalDate> = _data.asStateFlow()
@@ -146,7 +152,9 @@ class KidsViewModel(
     }
 
     fun impostaPresenza(bambinoId: Long, presenza: Presenza) = modifica(bambinoId) {
-        if (presenza == Presenza.ASSENTE) {
+        // Assente e festivo sono giornate chiuse: le faccine rimaste da prima
+        // resterebbero invisibili ma continuerebbero a pesare sui conti.
+        if (presenza == Presenza.ASSENTE || presenza == Presenza.FESTIVO) {
             it.copy(presenza = presenza, voti = emptyMap())
         } else {
             it.copy(presenza = presenza)
@@ -178,6 +186,36 @@ class KidsViewModel(
         viewModelScope.launch { repo.rinomina(bambino, nome) }
     }
 
+    /**
+     * Importa la foto scelta dalla galleria. La vecchia si cancella solo dopo
+     * che la nuova è stata scritta, così un errore non lascia il bambino senza.
+     */
+    fun scegliFoto(bambino: Bambino, origine: Uri) {
+        viewModelScope.launch {
+            val nuova = withContext(Dispatchers.IO) {
+                Foto.importa(contesto, bambino.id, origine)
+            } ?: return@launch
+            repo.impostaFoto(bambino.id, nuova)
+            withContext(Dispatchers.IO) { Foto.elimina(contesto, bambino.foto) }
+        }
+    }
+
+    fun rimuoviFoto(bambino: Bambino) {
+        viewModelScope.launch {
+            repo.impostaFoto(bambino.id, null)
+            withContext(Dispatchers.IO) { Foto.elimina(contesto, bambino.foto) }
+        }
+    }
+
+    /** Il JSON di backup si porta dietro anche le foto, codificate in base64. */
+    suspend fun backupJson(): String {
+        val elenco = repo.bambini.first()
+        val giornate = repo.tutteLeGiornate()
+        return withContext(Dispatchers.IO) {
+            Backup.esportaJson(elenco, giornate) { Foto.base64(contesto, it.foto) }
+        }
+    }
+
     fun cancellaTutteLeGiornate(alTermine: () -> Unit = {}) {
         viewModelScope.launch {
             repo.cancellaGiornate()
@@ -188,20 +226,21 @@ class KidsViewModel(
     suspend fun tutteLeGiornate(): List<Giornata> = repo.tutteLeGiornate()
 
     suspend fun applicaImportazione(
-        nomi: List<String>,
-        giornate: List<Backup.GiornataImportata>,
+        importazione: Backup.Importazione,
         sostituisci: Boolean
     ): Int {
         val esistenti = repo.bambini.first()
         val perNome = esistenti.associateBy { it.nome.lowercase() }.toMutableMap()
 
-        val mancanti = nomi.filter { !perNome.containsKey(it.lowercase()) }
+        val mancanti = importazione.nomiBambini.filter { !perNome.containsKey(it.lowercase()) }
         if (mancanti.isNotEmpty()) {
             repo.creaBambini(mancanti)
             repo.bambini.first().forEach { perNome[it.nome.lowercase()] = it }
         }
 
-        val convertite = giornate.mapNotNull { importata ->
+        ripristinaFoto(importazione.fotoPerNome, perNome)
+
+        val convertite = importazione.giornate.mapNotNull { importata ->
             val bambino = perNome[importata.nomeBambino.lowercase()] ?: return@mapNotNull null
             importata.giornata.copy(bambinoId = bambino.id)
         }
@@ -210,11 +249,31 @@ class KidsViewModel(
         return convertite.size
     }
 
+    /** Le foto del backup sostituiscono quelle sul telefono solo dove ce ne sono. */
+    private suspend fun ripristinaFoto(
+        codificate: Map<String, String>,
+        perNome: Map<String, Bambino>
+    ) {
+        codificate.forEach { (nome, base64) ->
+            val bambino = perNome[nome.lowercase()] ?: return@forEach
+            val byte = Foto.daBase64(base64) ?: return@forEach
+            val salvata = withContext(Dispatchers.IO) {
+                Foto.salvaByte(contesto, bambino.id, byte)
+            } ?: return@forEach
+            repo.impostaFoto(bambino.id, salvata)
+            withContext(Dispatchers.IO) { Foto.elimina(contesto, bambino.foto) }
+        }
+    }
+
     companion object {
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 val app = this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as KidsTrackerApp
-                KidsViewModel(app.contenitore.repository, app.contenitore.preferenze)
+                KidsViewModel(
+                    app.contenitore.repository,
+                    app.contenitore.preferenze,
+                    app.applicationContext
+                )
             }
         }
     }

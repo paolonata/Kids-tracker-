@@ -27,7 +27,6 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.kidstracker.domain.Bambino
-import com.kidstracker.domain.Voto
 import com.kidstracker.ui.tema.Crema
 import com.kidstracker.ui.tema.Inchiostro
 import com.kidstracker.ui.tema.InchiostroFaccina
@@ -98,7 +97,8 @@ fun BarraNavigazione(
 
 /**
  * Le due linguette per passare da un bambino all'altro.
- * Quella attiva prende il colore del bambino, con la faccina in negativo.
+ * Quella attiva prende il colore del bambino. A sinistra del nome c'è la foto
+ * del bambino, o la faccina in negativo se non ne è stata scelta una.
  */
 @Composable
 fun SelettoreBambino(
@@ -132,11 +132,12 @@ fun SelettoreBambino(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Faccina(
-                    voto = Voto.SI,
-                    dimensione = if (compatto) 20.dp else 26.dp,
+                AvatarBambino(
+                    foto = bambino.foto,
+                    dimensione = if (compatto) 24.dp else 34.dp,
                     riempimento = if (attivo) Crema else colore,
-                    tratto = if (attivo) InchiostroFaccina else Superficie
+                    tratto = if (attivo) InchiostroFaccina else Superficie,
+                    bordo = if (attivo) Crema else Inchiostro
                 )
                 Text(
                     bambino.nome,
