@@ -27,22 +27,26 @@ enum class Salute(val etichetta: String) {
     FEBBRE("Febbre")
 }
 
-/** Le sei cose che segniamo ogni giorno. */
+/** Le otto cose che segniamo ogni giorno. */
 enum class Categoria(val etichetta: String) {
     NANNA("Nanna"),
     PRIMO("Primo"),
     SECONDO("Secondo"),
     DOLCE("Dolce"),
     ENTRATA("Entrata"),
-    USCITA("Uscita");
+    USCITA("Uscita"),
+    COLAZIONE("Colazione"),
+    ACQUA("Acqua");
 
     companion object {
         val pasti: List<Categoria> = listOf(PRIMO, SECONDO, DOLCE)
-        // L'ordine qui è quello con cui compare la carta "Pappa e nanna" in
-        // Oggi: prima la pappa, poi la nanna.
-        val nannaEPappa: List<Categoria> = listOf(PRIMO, SECONDO, DOLCE, NANNA)
-        val porta: List<Categoria> = listOf(ENTRATA, USCITA)
-        val tutte: List<Categoria> = listOf(NANNA, PRIMO, SECONDO, DOLCE, ENTRATA, USCITA)
+        val nannaEUscita: List<Categoria> = listOf(NANNA, USCITA)
+        val colazioneEAcqua: List<Categoria> = listOf(COLAZIONE, ACQUA)
+        // Colazione e acqua sono state aggiunte dopo: stanno in coda, così le
+        // colonne dell'export e del backup delle giornate già segnate non si
+        // spostano.
+        val tutte: List<Categoria> =
+            listOf(NANNA, PRIMO, SECONDO, DOLCE, ENTRATA, USCITA, COLAZIONE, ACQUA)
 
         fun daNome(nome: String?): Categoria? = entries.firstOrNull { it.name == nome }
     }
@@ -87,9 +91,9 @@ data class Giornata(
         get() = presenza != Presenza.SCUOLA || voti.size == Categoria.tutte.size
 
     /**
-     * Quante delle sette cose (presenza + sei faccine) sono state segnate.
+     * Quante delle nove cose (presenza + otto faccine) sono state segnate.
      * Una giornata mai toccata vale zero: "a scuola" è il valore di partenza,
-     * non una scelta, e contarlo farebbe apparire 1 su 7 senza aver fatto nulla.
+     * non una scelta, e contarlo farebbe apparire 1 su 9 senza aver fatto nulla.
      */
     val segnate: Int
         get() = when {
@@ -109,7 +113,7 @@ data class Giornata(
     val indicePappa: Int?
         get() = indice(Categoria.pasti)
 
-    /** Tutte e sei le categorie, pesate uguale. */
+    /** Tutte e otto le categorie, pesate uguale. */
     val indiceGiornata: Int?
         get() = indice(Categoria.tutte)
 
@@ -132,6 +136,6 @@ data class Giornata(
         }
 
     companion object {
-        const val TOTALE_SEGNABILI = 7
+        const val TOTALE_SEGNABILI = 9
     }
 }

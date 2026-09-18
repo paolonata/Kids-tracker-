@@ -241,6 +241,8 @@ fun SchermataAndamento(
 /** L'ordine con cui compaiono le righe nella carta "Categoria per categoria". */
 private val ORDINE_CATEGORIA_PER_CATEGORIA = listOf(
     Categoria.ENTRATA,
+    Categoria.COLAZIONE,
+    Categoria.ACQUA,
     Categoria.PRIMO,
     Categoria.SECONDO,
     Categoria.DOLCE,

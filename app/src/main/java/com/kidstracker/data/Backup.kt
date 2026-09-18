@@ -133,8 +133,8 @@ object Backup {
         val perId = bambini.associateBy { it.id }
         val righe = StringBuilder()
         righe.append(
-            "bambino;data;giorno_settimana;presenza;nanna;primo;secondo;dolce;entrata;uscita;" +
-                "salute;indice_pappa;indice_giornata;nota\n"
+            "bambino;data;giorno_settimana;presenza;entrata;colazione;acqua;primo;secondo;dolce;" +
+                "nanna;uscita;salute;indice_pappa;indice_giornata;nota\n"
         )
         giornate.sortedWith(compareBy({ it.data }, { it.bambinoId })).forEach { g ->
             val campi = listOf(
@@ -142,11 +142,13 @@ object Backup {
                 g.data.toString(),
                 g.data.dayOfWeek.value.toString(),
                 g.presenza.name,
-                g.voti[Categoria.NANNA]?.name ?: "",
+                g.voti[Categoria.ENTRATA]?.name ?: "",
+                g.voti[Categoria.COLAZIONE]?.name ?: "",
+                g.voti[Categoria.ACQUA]?.name ?: "",
                 g.voti[Categoria.PRIMO]?.name ?: "",
                 g.voti[Categoria.SECONDO]?.name ?: "",
                 g.voti[Categoria.DOLCE]?.name ?: "",
-                g.voti[Categoria.ENTRATA]?.name ?: "",
+                g.voti[Categoria.NANNA]?.name ?: "",
                 g.voti[Categoria.USCITA]?.name ?: "",
                 g.salute.name,
                 g.indicePappa?.toString() ?: "",
@@ -178,8 +180,9 @@ object Backup {
         val leggibile = Excel.Foglio(
             nome = "Giornate",
             intestazioni = listOf(
-                "bambino", "data", "giorno", "presenza", "nanna", "primo", "secondo",
-                "dolce", "entrata", "uscita", "salute", "indice pappa", "indice giornata", "nota"
+                "bambino", "data", "giorno", "presenza", "entrata", "colazione", "acqua",
+                "primo", "secondo", "dolce", "nanna", "uscita", "salute", "indice pappa",
+                "indice giornata", "nota"
             ),
             righe = ordinate.map { g ->
                 listOf(
@@ -187,11 +190,13 @@ object Backup {
                     Excel.testo(g.data.toString()),
                     Excel.testo(NOMI_GIORNI[g.data.dayOfWeek.value - 1]),
                     Excel.testo(g.presenza.etichetta),
-                    Excel.testo(etichetta(g.voti[Categoria.NANNA])),
+                    Excel.testo(etichetta(g.voti[Categoria.ENTRATA])),
+                    Excel.testo(etichetta(g.voti[Categoria.COLAZIONE])),
+                    Excel.testo(etichetta(g.voti[Categoria.ACQUA])),
                     Excel.testo(etichetta(g.voti[Categoria.PRIMO])),
                     Excel.testo(etichetta(g.voti[Categoria.SECONDO])),
                     Excel.testo(etichetta(g.voti[Categoria.DOLCE])),
-                    Excel.testo(etichetta(g.voti[Categoria.ENTRATA])),
+                    Excel.testo(etichetta(g.voti[Categoria.NANNA])),
                     Excel.testo(etichetta(g.voti[Categoria.USCITA])),
                     Excel.testo(g.salute.etichetta),
                     Excel.numero(g.indicePappa),

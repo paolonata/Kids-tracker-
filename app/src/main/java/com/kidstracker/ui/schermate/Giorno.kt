@@ -61,6 +61,8 @@ import com.kidstracker.ui.tema.InchiostroFaccina
 import com.kidstracker.ui.tema.Inchiostro
 import com.kidstracker.ui.tema.InkSecondario
 import com.kidstracker.ui.tema.InkTenue
+import com.kidstracker.ui.tema.Lilla
+import com.kidstracker.ui.tema.Menta
 import com.kidstracker.ui.tema.MicroEtichetta
 import com.kidstracker.ui.tema.MicroEtichettaStretta
 import com.kidstracker.ui.tema.Rosa
@@ -213,11 +215,23 @@ fun SchermataGiorno(
                     )
                 }
             } else {
+                // L'ordine della giornata scolastica: entrata, colazione,
+                // poi a pranzo, poi nanna e uscita.
                 SchedaSticker(sfondo = Azzurrino) {
-                    Text("Pappa e nanna", style = MaterialTheme.typography.headlineSmall)
+                    Text("Entrata", style = MaterialTheme.typography.headlineSmall)
+                    Spacer(Modifier.height(9.dp))
+                    SelettoreFaccine(
+                        etichetta = Categoria.ENTRATA.etichetta,
+                        valore = giornata.voti[Categoria.ENTRATA],
+                        onCambia = { voto -> onVoto(bambino.id, Categoria.ENTRATA, voto) }
+                    )
+                }
+
+                SchedaSticker(sfondo = Lilla) {
+                    Text("Colazione", style = MaterialTheme.typography.headlineSmall)
                     Spacer(Modifier.height(9.dp))
                     IntestazioneColonne()
-                    Categoria.nannaEPappa.forEach { categoria ->
+                    Categoria.colazioneEAcqua.forEach { categoria ->
                         Spacer(Modifier.height(8.dp))
                         SelettoreFaccine(
                             etichetta = categoria.etichetta,
@@ -228,8 +242,22 @@ fun SchermataGiorno(
                 }
 
                 SchedaSticker(sfondo = Rosa) {
-                    Text("Entrata e uscita", style = MaterialTheme.typography.headlineSmall)
-                    Categoria.porta.forEach { categoria ->
+                    Text("A pranzo", style = MaterialTheme.typography.headlineSmall)
+                    Spacer(Modifier.height(9.dp))
+                    IntestazioneColonne()
+                    Categoria.pasti.forEach { categoria ->
+                        Spacer(Modifier.height(8.dp))
+                        SelettoreFaccine(
+                            etichetta = categoria.etichetta,
+                            valore = giornata.voti[categoria],
+                            onCambia = { voto -> onVoto(bambino.id, categoria, voto) }
+                        )
+                    }
+                }
+
+                SchedaSticker(sfondo = Menta) {
+                    Text("Nanna e uscita", style = MaterialTheme.typography.headlineSmall)
+                    Categoria.nannaEUscita.forEach { categoria ->
                         Spacer(Modifier.height(10.dp))
                         SelettoreFaccine(
                             etichetta = categoria.etichetta,
