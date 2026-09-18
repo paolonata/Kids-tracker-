@@ -83,6 +83,8 @@ internal fun GiornataEntity.aDominio(): Giornata {
         voto(dolce)?.let { put(Categoria.DOLCE, it) }
         voto(entrata)?.let { put(Categoria.ENTRATA, it) }
         voto(uscita)?.let { put(Categoria.USCITA, it) }
+        voto(colazione)?.let { put(Categoria.COLAZIONE, it) }
+        voto(acqua)?.let { put(Categoria.ACQUA, it) }
     }
     return Giornata(
         bambinoId = bambinoId,
@@ -104,6 +106,8 @@ internal fun Giornata.aEntita() = GiornataEntity(
     dolce = voti[Categoria.DOLCE]?.name,
     entrata = voti[Categoria.ENTRATA]?.name,
     uscita = voti[Categoria.USCITA]?.name,
+    colazione = voti[Categoria.COLAZIONE]?.name,
+    acqua = voti[Categoria.ACQUA]?.name,
     salute = salute.name,
     nota = nota,
     aggiornatoIl = System.currentTimeMillis()

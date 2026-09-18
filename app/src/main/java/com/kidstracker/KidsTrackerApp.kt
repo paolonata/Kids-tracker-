@@ -18,7 +18,7 @@ class Contenitore(context: Context) {
             context.applicationContext,
             KidsDatabase::class.java,
             KidsDatabase.NOME
-        ).addMigrations(KidsDatabase.DA_1_A_2).build()
+        ).addMigrations(KidsDatabase.DA_1_A_2, KidsDatabase.DA_2_A_3).build()
     }
 
     val repository: KidsRepository by lazy { KidsRepository(database.dao()) }

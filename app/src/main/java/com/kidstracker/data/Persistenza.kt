@@ -49,6 +49,8 @@ data class GiornataEntity(
     val dolce: String?,
     val entrata: String?,
     val uscita: String?,
+    val colazione: String? = null,
+    val acqua: String? = null,
     val salute: String,
     val nota: String,
     val aggiornatoIl: Long
@@ -102,7 +104,7 @@ interface KidsDao {
 
 @Database(
     entities = [BambinoEntity::class, GiornataEntity::class],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class KidsDatabase : RoomDatabase() {
@@ -118,6 +120,14 @@ abstract class KidsDatabase : RoomDatabase() {
         val DA_1_A_2 = object : Migration(1, 2) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE bambini ADD COLUMN foto TEXT")
+            }
+        }
+
+        /** Le due nuove faccine, colazione e acqua: colonne in più, storico intatto. */
+        val DA_2_A_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE giornate ADD COLUMN colazione TEXT")
+                db.execSQL("ALTER TABLE giornate ADD COLUMN acqua TEXT")
             }
         }
     }
