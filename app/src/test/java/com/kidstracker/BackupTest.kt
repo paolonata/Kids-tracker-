@@ -104,11 +104,13 @@ class BackupTest {
         assertTrue(righe.any { it.contains(";FESTIVO;") })
 
         // Nel foglio leggibile ci va scritto in chiaro, senza indici accanto.
+        // Intestazioni: bambino,data,giorno,presenza,entrata,colazione,acqua,
+        // primo,secondo,dolce,nanna,uscita,salute,indice pappa,indice giornata,nota.
         val giornateFoglio = Backup.fogliExcel(bambini, conFestivo).first { it.nome == "Giornate" }
         val riga = giornateFoglio.righe.last()
         assertEquals(Excel.Cella.Testo("Festivo"), riga[3])
-        assertEquals(Excel.Cella.Vuota, riga[11])
-        assertEquals(Excel.Cella.Vuota, riga[12])
+        assertEquals(Excel.Cella.Vuota, riga[13])
+        assertEquals(Excel.Cella.Vuota, riga[14])
     }
 
     @Test
