@@ -199,6 +199,26 @@ object Statistiche {
             .filter { it.totale >= minimoOsservazioni && it.difficili > 0 }
             .maxByOrNull { it.difficili.toDouble() / it.totale }
 
+    data class ConteggioComplessivo(val difficili: Int, val totale: Int)
+
+    /**
+     * Quante volte l'entrata è andata male in totale, senza distinguere il
+     * giorno della settimana. Serve quando non c'è ancora nessun giorno con
+     * abbastanza osservazioni per [giornoPiuDifficile]: senza questo,
+     * "nessun giorno sistematicamente difficile" suonerebbe come "va bene",
+     * anche quando l'entrata è quasi sempre difficile ma i dati sono ancora
+     * troppo pochi e sparsi per isolare un giorno preciso.
+     */
+    fun entrataDifficileComplessiva(giornate: List<Giornata>): ConteggioComplessivo? {
+        val osservate = analizzabili(giornate)
+            .filter { it.presenza != Presenza.ASSENTE && it.voti.containsKey(Categoria.ENTRATA) }
+        if (osservate.isEmpty()) return null
+        return ConteggioComplessivo(
+            difficili = osservate.count { it.voti[Categoria.ENTRATA] == Voto.NO },
+            totale = osservate.size
+        )
+    }
+
     fun percentuale(valore: Double?): String =
         if (valore == null) "–" else "${valore.roundToInt()}%"
 }

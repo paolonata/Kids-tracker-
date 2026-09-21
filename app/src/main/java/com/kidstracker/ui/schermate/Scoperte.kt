@@ -30,6 +30,7 @@ import com.kidstracker.ui.componenti.IconaImpostazioni
 import com.kidstracker.ui.componenti.BarraOrizzontale
 import com.kidstracker.ui.componenti.IntestazionePrugna
 import com.kidstracker.ui.componenti.SchedaSticker
+import com.kidstracker.ui.componenti.SelettoreBambino
 import com.kidstracker.ui.componenti.StrisciaGiorni
 import com.kidstracker.ui.componenti.sticker
 import com.kidstracker.ui.tema.Azzurrino
@@ -52,6 +53,7 @@ fun SchermataScoperte(
     bambini: List<Bambino>,
     bambinoCorrente: Bambino?,
     storico: List<Giornata>,
+    onSeleziona: (Long) -> Unit,
     onImpostazioni: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -82,6 +84,12 @@ fun SchermataScoperte(
                 .padding(start = 20.dp, end = 20.dp, top = 16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
+            SelettoreBambino(
+                bambini = bambini,
+                selezionatoId = bambino.id,
+                onSeleziona = onSeleziona
+            )
+
             if (sue.size < 5) {
                 SchedaSticker(sfondo = Azzurrino) {
                     Text(
@@ -197,64 +205,87 @@ private fun RigaConfronto(nome: String, valore: Double?, giorni: Int, colore: Co
 @Composable
 private fun SchedaEntrata(giornate: List<Giornata>, bambino: Bambino) {
     val peggiore = Statistiche.giornoPiuDifficile(giornate)
+    val perGiorno = Statistiche.entrateDifficiliPerGiorno(giornate)
     SchedaSticker(sfondo = Rosa) {
         if (peggiore == null) {
-            Text("L'entrata a scuola", style = MaterialTheme.typography.headlineMedium)
+            // Nessun giorno della settimana ha ancora 3 osservazioni: non
+            // vuol dire che l'entrata vada bene, solo che non si può ancora
+            // dire QUALE giorno pesa di più. Il conteggio complessivo, non
+            // legato al giorno della settimana, dice la verità nel frattempo.
+            val complessiva = Statistiche.entrataDifficileComplessiva(giornate)
+            if (complessiva == null || complessiva.difficili == 0) {
+                Text("L'entrata a scuola", style = MaterialTheme.typography.headlineMedium)
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    "Finora ${bambino.nome} non ha mai avuto un'entrata difficile. Buon segno.",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = InkTerziario
+                )
+            } else {
+                val quota = complessiva.difficili.toDouble() / complessiva.totale
+                Text(
+                    if (quota >= 0.5) "L'entrata è difficile più spesso che no" else "Qualche entrata difficile",
+                    style = MaterialTheme.typography.headlineMedium
+                )
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    "${complessiva.difficili} volte su ${complessiva.totale} finora per ${bambino.nome}. " +
+                        "Non ci sono ancora abbastanza giornate sullo stesso giorno della settimana " +
+                        "per dire quale pesa di più.",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = InkTerziario
+                )
+            }
+        } else {
+            val giornoNome = Formati.giornoSettimanaCorto(peggiore.giorno)
+            Text(
+                "Il $giornoNome l'entrata è la più difficile",
+                style = MaterialTheme.typography.headlineMedium
+            )
             Spacer(Modifier.height(6.dp))
             Text(
-                "Finora ${bambino.nome} non ha mai avuto un giorno della settimana " +
-                    "sistematicamente difficile all'entrata. Buon segno.",
+                "${peggiore.difficili} volte su ${peggiore.totale} ${bambino.nome} " +
+                    "è entrato male di $giornoNome.",
                 style = MaterialTheme.typography.bodyLarge,
                 color = InkTerziario
             )
-            return@SchedaSticker
         }
 
-        val giornoNome = Formati.giornoSettimanaCorto(peggiore.giorno)
-        Text(
-            "Il $giornoNome l'entrata è la più difficile",
-            style = MaterialTheme.typography.headlineMedium
-        )
-        Spacer(Modifier.height(6.dp))
-        Text(
-            "${peggiore.difficili} volte su ${peggiore.totale} ${bambino.nome} " +
-                "è entrato male di $giornoNome.",
-            style = MaterialTheme.typography.bodyLarge,
-            color = InkTerziario
-        )
-        Spacer(Modifier.height(13.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            Statistiche.entrateDifficiliPerGiorno(giornate).forEach { conteggio ->
-                val quota = conteggio.difficili.toDouble() / conteggio.totale
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .sticker(Superficie, 15.dp, ombra = false)
-                        .padding(vertical = 9.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Box(
+        if (perGiorno.isNotEmpty()) {
+            Spacer(Modifier.height(13.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                perGiorno.forEach { conteggio ->
+                    val quota = conteggio.difficili.toDouble() / conteggio.totale
+                    Column(
                         modifier = Modifier
-                            .size(20.dp)
-                            .sticker(
-                                when {
-                                    quota >= 0.5 -> coloreGiudizio(Giudizio.DIFFICILE)
-                                    quota > 0.0 -> coloreGiudizio(Giudizio.COSI_COSI)
-                                    else -> coloreGiudizio(Giudizio.BUONO)
-                                },
-                                6.dp,
-                                ombra = false
-                            )
-                    )
-                    Spacer(Modifier.height(5.dp))
-                    Text(
-                        Formati.giornoSettimanaCorto(conteggio.giorno),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = InkTerziario
-                    )
+                            .weight(1f)
+                            .sticker(Superficie, 15.dp, ombra = false)
+                            .padding(vertical = 9.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(20.dp)
+                                .sticker(
+                                    when {
+                                        quota >= 0.5 -> coloreGiudizio(Giudizio.DIFFICILE)
+                                        quota > 0.0 -> coloreGiudizio(Giudizio.COSI_COSI)
+                                        else -> coloreGiudizio(Giudizio.BUONO)
+                                    },
+                                    6.dp,
+                                    ombra = false
+                                )
+                        )
+                        Spacer(Modifier.height(5.dp))
+                        Text(
+                            Formati.giornoSettimanaCorto(conteggio.giorno),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = InkTerziario
+                        )
+                    }
                 }
             }
         }

@@ -171,6 +171,7 @@ private fun ContenutoPrincipale(vm: KidsViewModel) {
                     bambini = bambini,
                     bambinoCorrente = bambinoCorrente,
                     storico = storico,
+                    onSeleziona = vm::seleziona,
                     onImpostazioni = { nav.navigate(ROTTA_IMPOSTAZIONI) },
                     modifier = Modifier.fillMaxSize()
                 )
