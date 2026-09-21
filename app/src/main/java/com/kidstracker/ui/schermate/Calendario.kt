@@ -343,14 +343,14 @@ private fun RiepilogoMese(tutte: List<Giornata>) {
     ) {
         Riquadro("$buone", "giornate buone su $segnate", Menta, Modifier.weight(1f).fillMaxHeight())
         Riquadro(
-            Statistiche.percentuale(pappa),
-            "indice pappa del mese",
+            Statistiche.puntiSuDue(pappa),
+            "indice pappa del mese · su 2",
             Azzurrino,
             Modifier.weight(1f).fillMaxHeight()
         )
         Riquadro(
-            Statistiche.percentuale(entrata),
-            "indice entrata del mese",
+            Statistiche.puntiSuDue(entrata),
+            "indice entrata del mese · su 2",
             Rosa,
             Modifier.weight(1f).fillMaxHeight()
         )

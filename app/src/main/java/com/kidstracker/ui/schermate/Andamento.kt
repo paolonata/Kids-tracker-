@@ -151,7 +151,7 @@ fun SchermataAndamento(
 
             SchedaConTestata(
                 titolo = "Indice giornata",
-                sottotitolo = "media mobile a 7 giorni · 0–100%",
+                sottotitolo = "media mobile a 7 giorni · 0–2",
                 tintaTestata = Azzurrino
             ) {
                 GraficoLinee(serie = serie, etichette = etichette)
@@ -220,17 +220,20 @@ fun SchermataAndamento(
 
             SchedaConTestata(
                 titolo = "Giorno della settimana",
-                sottotitolo = "indice medio di ${bambino.nome} · tutto lo storico",
+                sottotitolo = "ultimi 5 giorni di scuola di ${bambino.nome}",
                 tintaTestata = Menta
             ) {
-                val medie = Statistiche.mediaPerGiornoSettimana(sueGiornate)
-                val barre = DayOfWeek.values()
-                    .filter { it.value <= 5 }
-                    .mapNotNull { giorno ->
-                        medie[giorno]?.let {
-                            BarraGiorno(Formati.giornoSettimanaCorto(giorno), it)
-                        }
-                    }
+                // Gli ultimi 5 giorni di scuola veri, non una media su tutto lo
+                // storico: se oggi è lunedì e ha già una faccina, il lunedì di
+                // oggi ci deve essere, non restare nascosto dietro una media
+                // che mischia mesi di lunedì passati.
+                val barre = sueGiornate
+                    .filter { it.data.dayOfWeek != DayOfWeek.SATURDAY && it.data.dayOfWeek != DayOfWeek.SUNDAY }
+                    .filter { it.indiceGiornata != null }
+                    .sortedByDescending { it.data }
+                    .take(5)
+                    .sortedBy { it.data }
+                    .map { BarraGiorno(Formati.giornoSettimanaCorto(it.data.dayOfWeek), it.indiceGiornata!!.toDouble()) }
                 BarreGiorni(barre = barre)
                 Spacer(Modifier.height(8.dp))
                 Text(
@@ -259,14 +262,14 @@ private val ORDINE_CATEGORIA_PER_CATEGORIA = listOf(
 
 private fun frasePerGiorno(barre: List<BarraGiorno>, nome: String): String {
     if (barre.size < 3) {
-        return "Con qualche giornata in più qui comparirà il confronto fra i giorni della settimana."
+        return "Con qualche giornata in più qui comparirà il confronto fra gli ultimi giorni."
     }
     val peggiore = barre.minBy { it.valore }
     val migliore = barre.maxBy { it.valore }
     val differenza = (migliore.valore - peggiore.valore).toInt()
     if (differenza < 8) {
-        return "I giorni della settimana di $nome si somigliano tutti: meno di dieci punti fra il migliore e il peggiore."
+        return "Gli ultimi giorni di $nome si somigliano tutti: meno di dieci punti fra il migliore e il peggiore."
     }
     return "Il giorno più in salita per $nome è ${peggiore.etichetta}: " +
-        "$differenza punti sotto ${migliore.etichetta}."
+        "${Statistiche.puntiSuDue(differenza.toDouble())} punti sotto ${migliore.etichetta}."
 }
