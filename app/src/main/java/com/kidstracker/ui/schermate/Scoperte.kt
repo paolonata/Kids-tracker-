@@ -46,6 +46,7 @@ import com.kidstracker.ui.tema.coloreBambino
 import com.kidstracker.ui.tema.coloreGiudizio
 import com.kidstracker.ui.Formati
 import kotlin.math.abs
+import kotlin.math.roundToInt
 
 @Composable
 fun SchermataScoperte(
@@ -186,7 +187,7 @@ private fun RigaConfronto(nome: String, valore: Double?, giorni: Int, colore: Co
         ) {
             Text(nome, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
             Text(
-                "${Statistiche.puntiSuDue(valore)}/2",
+                Statistiche.percentuale(valore),
                 style = MaterialTheme.typography.headlineSmall
             )
         }
@@ -408,7 +409,7 @@ private fun SchedaGemelli(bambini: List<Bambino>, storico: List<Giornata>) {
                     )
                     Text(
                         (if (differenza.delta >= 0) "+" else "−") +
-                            Statistiche.puntiSuDue(abs(differenza.delta)),
+                            "${abs(differenza.delta).roundToInt()}",
                         style = MaterialTheme.typography.labelLarge,
                         modifier = Modifier.width(32.dp)
                     )

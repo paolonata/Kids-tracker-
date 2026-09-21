@@ -151,7 +151,7 @@ fun SchermataAndamento(
 
             SchedaConTestata(
                 titolo = "Indice giornata",
-                sottotitolo = "media mobile a 7 giorni · 0–2",
+                sottotitolo = "media mobile a 7 giorni · 0–100%",
                 tintaTestata = Azzurrino
             ) {
                 GraficoLinee(serie = serie, etichette = etichette)
@@ -271,5 +271,5 @@ private fun frasePerGiorno(barre: List<BarraGiorno>, nome: String): String {
         return "Gli ultimi giorni di $nome si somigliano tutti: meno di dieci punti fra il migliore e il peggiore."
     }
     return "Il giorno più in salita per $nome è ${peggiore.etichetta}: " +
-        "${Statistiche.puntiSuDue(differenza.toDouble())} punti sotto ${migliore.etichetta}."
+        "$differenza punti sotto ${migliore.etichetta}."
 }

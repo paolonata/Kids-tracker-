@@ -40,7 +40,6 @@ import com.kidstracker.domain.Giornata
 import com.kidstracker.domain.Giudizio
 import com.kidstracker.domain.Presenza
 import com.kidstracker.domain.Salute
-import com.kidstracker.domain.Statistiche
 import com.kidstracker.domain.Voto
 import com.kidstracker.ui.Formati
 import com.kidstracker.ui.componenti.BarraAvanzamento
@@ -174,8 +173,7 @@ fun SchermataGiorno(
                         )
                         Spacer(Modifier.height(4.dp))
                         Text(
-                            "Indice ${Statistiche.puntiSuDue(indice)}/2 · ${giornata.segnate} cose su " +
-                                "${Giornata.TOTALE_SEGNABILI} segnate",
+                            "Indice $indice% · ${giornata.segnate} cose su ${Giornata.TOTALE_SEGNABILI} segnate",
                             style = MaterialTheme.typography.bodyMedium,
                             color = tinta
                         )

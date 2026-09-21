@@ -38,7 +38,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import java.util.Locale
 import com.kidstracker.ui.tema.Crema
 import com.kidstracker.ui.tema.Figtree
 import com.kidstracker.ui.tema.Giallo
@@ -61,17 +60,8 @@ data class SerieGrafico(
 )
 
 /**
- * I valori che arrivano qui restano sulla vecchia scala interna 0–100 (la
- * geometria dei grafici non ha bisogno di cambiare), ma il testo mostrato
- * segue la scala reale delle faccine, 0–2 con un decimale.
- */
-private fun suDue(valore: Double): String = String.format(Locale.ITALIAN, "%.1f", valore / 50.0)
-
-/**
- * Linee su fondo bianco. I dati restano sulla scala interna 0–100, ma
- * l'asse e i valori mostrati sono sulla scala reale delle faccine, 0–2.
- * Trascinando il dito sul grafico si legge il valore di quel giorno per
- * entrambi i bambini.
+ * Linee su fondo bianco, asse unico 0–100. Trascinando il dito sul grafico
+ * si legge il valore di quel giorno per entrambi i bambini.
  */
 @Composable
 fun GraficoLinee(
@@ -119,7 +109,7 @@ fun GraficoLinee(
                     PallinoEtichetta(
                         colore = s.colore,
                         testo = s.valori.getOrNull(selezione)
-                            ?.let { suDue(it) } ?: "–"
+                            ?.let { "${it.roundToInt()}%" } ?: "–"
                     )
                 }
             } else {
@@ -168,7 +158,7 @@ fun GraficoLinee(
                     Offset(size.width - 4f, yy),
                     strokeWidth = 1.5f
                 )
-                val testo = misuratore.measure("${(livello / 50.0).toInt()}", stileAsse)
+                val testo = misuratore.measure("${livello.toInt()}", stileAsse)
                 drawText(
                     textLayoutResult = testo,
                     topLeft = Offset(sinistra - 6f - testo.size.width, yy - testo.size.height / 2f)
@@ -367,7 +357,7 @@ fun BarreGiorni(
                     style = Stroke(Misure.bordo.toPx())
                 )
                 if (barra.valore == minimo || barra.valore == massimo) {
-                    val misura = misuratore.measure(suDue(barra.valore), stileValore)
+                    val misura = misuratore.measure("${barra.valore.roundToInt()}%", stileValore)
                     drawText(
                         misura,
                         topLeft = Offset(
@@ -498,7 +488,7 @@ fun EtichettaDelta(delta: Double?, modifier: Modifier = Modifier) {
     ) {
         FrecciaDelta(su)
         Text(
-            (if (su) "+" else "−") + suDue(kotlin.math.abs(delta)),
+            (if (su) "+" else "−") + "${kotlin.math.abs(delta).roundToInt()}%",
             style = MaterialTheme.typography.labelLarge,
             color = if (su) VerdeScuro else RossoScuro
         )

@@ -2,8 +2,8 @@ package com.kidstracker.domain
 
 import java.time.DayOfWeek
 import java.time.LocalDate
-import java.util.Locale
 import kotlin.math.abs
+import kotlin.math.roundToInt
 
 /**
  * Tutta la matematica dell'app sta qui: funzioni pure, senza Android,
@@ -212,16 +212,8 @@ object Statistiche {
         )
     }
 
-    /**
-     * L'indice (0–100, media dei voti) riportato alla scala reale delle
-     * faccine: 0–2, con un decimale, senza il "/2" — chi lo mostra lo mette
-     * dove c'è spazio, o lo spiega nell'etichetta accanto. "Percentuale"
-     * lasciava intendere una quota di giorni; qui è la media dei tre gradini
-     * possibili (no/così così/sì), la stessa cosa che il numero ha sempre
-     * misurato.
-     */
-    fun puntiSuDue(valore: Double?): String =
-        if (valore == null) "–" else String.format(Locale.ITALIAN, "%.1f", valore / 50.0)
+    fun percentuale(valore: Double?): String =
+        if (valore == null) "–" else "${valore.roundToInt()}%"
 
-    fun puntiSuDue(valore: Int?): String = puntiSuDue(valore?.toDouble())
+    fun percentuale(valore: Int?): String = percentuale(valore?.toDouble())
 }
