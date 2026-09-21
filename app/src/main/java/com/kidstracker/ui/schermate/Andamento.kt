@@ -165,7 +165,7 @@ fun SchermataAndamento(
 
             SchedaConTestata(
                 titolo = "Categoria per categoria",
-                sottotitolo = "ultimi 14 giorni · variazione sul periodo prima",
+                sottotitolo = "ultimi 14 giorni di scuola · variazione sul periodo prima",
                 tintaTestata = Lilla,
                 extraTestata = {
                     Spacer(Modifier.height(11.dp))
@@ -177,18 +177,25 @@ fun SchermataAndamento(
                     )
                 }
             ) {
+                // Sabato e domenica non sono giorni di scuola: contarli qui
+                // lasciava una barra vuota ogni settimana, per ogni categoria.
+                // Si risale finché non si hanno 14 giorni feriali, non 14
+                // giorni di calendario: la stessa finestra per ogni riga.
+                val ultimiGiorniScuola = generateSequence(LocalDate.now()) { it.minusDays(1) }
+                    .filter { it.dayOfWeek != DayOfWeek.SATURDAY && it.dayOfWeek != DayOfWeek.SUNDAY }
+                    .take(14)
+                    .toList()
+                    .asReversed()
+
                 // Solo l'ordine con cui compaiono le righe qui: Categoria.tutte
                 // resta quella dell'export e delle statistiche, invariata.
                 ORDINE_CATEGORIA_PER_CATEGORIA.forEach { categoria ->
                     val variazione = Statistiche.variazioneCategoria(sueGiornate, categoria, LocalDate.now())
-                    val ultimi = generateSequence(LocalDate.now().minusDays(13)) { it.plusDays(1) }
-                        .takeWhile { !it.isAfter(LocalDate.now()) }
-                        .map { giorno ->
-                            sueGiornate.firstOrNull { it.data == giorno }
-                                ?.voti?.get(categoria)
-                                ?.let { it.punti * 50.0 }
-                        }
-                        .toList()
+                    val ultimi = ultimiGiorniScuola.map { giorno ->
+                        sueGiornate.firstOrNull { it.data == giorno }
+                            ?.voti?.get(categoria)
+                            ?.let { it.punti * 50.0 }
+                    }
 
                     Row(
                         modifier = Modifier
