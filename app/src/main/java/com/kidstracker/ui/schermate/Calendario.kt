@@ -328,7 +328,11 @@ private fun RiepilogoMese(tutte: List<Giornata>) {
                 Statistiche.mediaCategoria(giornate, Categoria.DOLCE)
             ).average()
         }
-    val striscia = Statistiche.strisciaCorrente(giornate)
+    // La striscia senza rossi vive già in Scoperte, record compreso: ripeterla
+    // qui non aggiungeva niente. L'entrata invece non ha ancora un numero nel
+    // riepilogo del mese, ed è spesso quello che i genitori vogliono
+    // controllare al volo.
+    val entrata = Statistiche.mediaCategoria(giornate, Categoria.ENTRATA)
 
     // IntrinsicSize.Max sulla riga: senza, ogni riquadro prende solo l'altezza
     // della propria etichetta, e "indice pappa del mese" va a capo diversamente
@@ -344,10 +348,12 @@ private fun RiepilogoMese(tutte: List<Giornata>) {
             Azzurrino,
             Modifier.weight(1f).fillMaxHeight()
         )
-        // La stessa striscia di Scoperte.kt: conta i giorni senza rossi, non
-        // solo quelli "Buona" — un giorno così così ma senza rossi la allunga.
-        // L'etichetta deve dirlo, non "buoni", che è un'altra cosa.
-        Riquadro("$striscia", "giorni senza rossi di fila", Rosa, Modifier.weight(1f).fillMaxHeight())
+        Riquadro(
+            Statistiche.percentuale(entrata),
+            "indice entrata del mese",
+            Rosa,
+            Modifier.weight(1f).fillMaxHeight()
+        )
     }
 }
 
